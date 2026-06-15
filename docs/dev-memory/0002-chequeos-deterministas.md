@@ -37,14 +37,20 @@ humano.
   default setup cubre JS/TS + actions gratis.
 - **Semgrep OSS** (`.github/workflows/semgrep.yml`) — rulesets `p/default`,
   `typescript`, `react`, `nextjs`, `owasp-top-ten`, `secrets`. Modo OSS, sin
-  cuenta ni upload.
+  cuenta ni upload. Corre en **todos los PRs** (no solo los que apuntan a main):
+  el SAST es un gate por PR. Imagen pineada por versión (`semgrep/semgrep:1.166.0`).
 - **gitleaks** — job en `pr.yml` + hook pre-commit (`gitleaks protect --staged`,
   opcional local). Config `.gitleaks.toml` con allowlist de `.env.example`.
 - **Dependabot** (`.github/dependabot.yml`) — npm + github-actions, semanal,
   agrupado.
-- **`npm audit --omit=dev --audit-level=high`** en CI — bloquea por vulns de
-  **producción** high+. Las dev (esbuild/vite del toolchain de test) y las
-  moderadas las trackea Dependabot sin bloquear.
+- **`npm audit --omit=dev --audit-level=high`** — en **`security.yml`**, job
+  **programado** (semanal + `workflow_dispatch`), **no** en `pr.yml`. Depende de
+  advisories upstream: un aviso nuevo rompería el CI de un PR sin relación con su
+  diff, contradiciendo "determinista". Bloquea por vulns de **producción** high+;
+  las dev (esbuild/vite del toolchain de test) y las moderadas las trackea
+  Dependabot.
+- **Actions pineadas por SHA** — `checkout`, `setup-node`, `gitleaks-action` con
+  el commit SHA (comentario `# vN`), no el tag mutable. Supply chain.
 
 ### Hooks locales + consistencia
 

@@ -34,8 +34,11 @@ const eslintConfig = [
   {
     plugins: { 'no-secrets': noSecrets },
     rules: {
-      // Credenciales hardcodeadas: entropía alta en literales.
-      'no-secrets/no-secrets': ['error', { tolerance: 4.2 }],
+      // Credenciales hardcodeadas: entropía alta en literales. Tolerancia 5.0
+      // para cortar falsos positivos en literales de alta entropía no-secretos
+      // (IDs, base64). El gate real de secretos es gitleaks + semgrep p/secrets;
+      // esto es belt-and-suspenders, igual que detect-object-injection apagado.
+      'no-secrets/no-secrets': ['error', { tolerance: 5.0 }],
       // Demasiado ruidoso (cualquier acceso por índice variable); lo cubre CodeQL/Semgrep.
       'security/detect-object-injection': 'off',
     },

@@ -2,11 +2,14 @@ name: Semgrep — SAST (OSS)
 
 # Semgrep en modo OSS: reglas comunitarias, sin cuenta ni upload externo.
 # Bloquea el PR si encuentra findings (exit code != 0).
+# Corre en TODOS los PRs (no solo los que apuntan a main): el SAST es un gate
+# por PR, igual que pr.yml. Imagen pineada por versión para reproducibilidad;
+# los rulesets p/* se resuelven del registry y pueden cambiar upstream (costo
+# inherente del SAST gestionado).
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -16,10 +19,10 @@ jobs:
     name: scan
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep:1.166.0
     # Sin SEMGREP_APP_TOKEN → modo OSS local, no sube nada.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - run: >-
           semgrep ci
           --config p/default

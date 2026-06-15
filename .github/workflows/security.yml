@@ -1,0 +1,27 @@
+name: Security — audit programado
+
+# `npm audit` depende de advisories publicados upstream: un aviso nuevo puede
+# romper el CI de un PR sin relación con su diff. Para mantener los gates de PR
+# deterministas, el audit corre acá (semanal + manual), no en pr.yml. Un fallo
+# acá señala una vuln de producción a resolver, sin bloquear merges en curso.
+on:
+  schedule:
+    - cron: '0 6 * * 1' # lunes 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Vulnerabilidades en dependencias de producción (high+). Las dev y las
+      # moderadas las trackea Dependabot.
+      - run: npm audit --omit=dev --audit-level=high

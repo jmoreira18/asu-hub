@@ -1,7 +1,10 @@
 name: PR — lint, types, unit + integration
 
 # Rápido en cada PR. Sin Allure (eso se reserva para E2E en release).
-# Todos los steps son bloqueantes: si alguno falla, no se mergea.
+# Todos los steps son bloqueantes y deterministas: dependen solo del diff +
+# package-lock, no de estado externo que cambie con el tiempo. El `npm audit`
+# (que depende de advisories publicados upstream y puede romper un PR sin
+# relación) vive en security.yml como job programado, no acá.
 on:
   pull_request:
   push:
@@ -14,8 +17,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -27,17 +30,14 @@ jobs:
       - run: npm run knip
       # Vitest corre unit + integration y aplica el gate de 100% sobre src/core.
       - run: npm run test:cov
-      # Vulnerabilidades en dependencias de producción (high+). Las dev y las
-      # moderadas las trackea Dependabot sin bloquear el PR.
-      - run: npm audit --omit=dev --audit-level=high
 
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
