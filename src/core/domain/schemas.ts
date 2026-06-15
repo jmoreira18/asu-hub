@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EXPERIENCE_LEVELS } from './types';
+import { EXPERIENCE_LEVELS, MAX_ATTENDEES } from './types';
 import { ValidationError } from './errors';
 
 const nonEmpty = (campo: string) => z.string().trim().min(1, `${campo} es obligatorio`);
@@ -23,18 +23,15 @@ export const attendeeSchema = z.object({
   }),
 });
 
-export const registrationInputSchema = z
-  .object({
-    buyerName: nonEmpty('Nombre del comprador'),
-    buyerEmail: z.string().trim().email('Email inválido'),
-    quantity: z.number().int('La cantidad debe ser entera').positive('La cantidad debe ser mayor a 0'),
-    attendees: z.array(attendeeSchema).min(1, 'Debe haber al menos un asistente'),
-  })
-  // La cantidad declarada tiene que coincidir con los asistentes cargados.
-  .refine((data) => data.attendees.length === data.quantity, {
-    message: 'La cantidad de asistentes no coincide con la cantidad declarada',
-    path: ['attendees'],
-  });
+export const registrationInputSchema = z.object({
+  buyerName: nonEmpty('Nombre del comprador'),
+  buyerEmail: z.string().trim().email('Email inválido'),
+  // La cantidad se deriva de attendees.length; el tope evita payloads abusivos.
+  attendees: z
+    .array(attendeeSchema)
+    .min(1, 'Debe haber al menos un asistente')
+    .max(MAX_ATTENDEES, `No se permiten más de ${MAX_ATTENDEES} asistentes por registro`),
+});
 
 /**
  * Valida la entrada del formulario y devuelve datos tipados.

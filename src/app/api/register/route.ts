@@ -3,8 +3,13 @@ import { registerAttendees } from '@core/usecases/register-attendees';
 import { ValidationError } from '@core/domain/errors';
 import { buildDeps } from '@adapters/factory';
 
-// Adapters construidos una vez por proceso (memoria persiste en dev).
-const handle = registerAttendees(buildDeps());
+// Adapters construidos perezosamente en el primer request y cacheados por
+// proceso (memoria persiste en dev). No se construyen al importar el módulo:
+// `next build` evalúa rutas sin variables de entorno y buildDeps lanzaría.
+let handle: ReturnType<typeof registerAttendees> | null = null;
+function getHandle() {
+  return (handle ??= registerAttendees(buildDeps()));
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -15,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await handle(body);
+    const result = await getHandle()(body);
     if (!result.emergencySynced) {
       // Registro persistido pero la planilla de emergencia no se sincronizó:
       // requiere reintento manual/automático. No rompe el registro.

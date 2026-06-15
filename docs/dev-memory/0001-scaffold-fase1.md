@@ -36,9 +36,32 @@ registro **sin pago** (Mercado Pago y facturación DGI quedan para Fase 2).
 - **Deslinde:** el texto lo provee ASU (existe de años anteriores); solo se
   guarda el flag `waiverAccepted` + un link.
 
+## Hardening (review, 2026-06-15)
+
+Correcciones sobre el registro dentro de esta misma PR:
+
+- **Fallback de memoria solo fuera de producción.** `pickGroup` (factory) recibe
+  `allowDev`. Con un grupo SIN configurar: en dev cae al adapter en memoria; en
+  producción **lanza**. Antes, un deploy sin credenciales devolvía `201` y perdía
+  los registros en el siguiente reinicio del proceso.
+- **Tope de asistentes (`MAX_ATTENDEES = 20`).** Schema (`.max`) + UI (`min/max`
+  y clamp en `setQuantity`). Evita payloads abusivos en el endpoint público.
+- **Escape de HTML en el email de confirmación.** Campos del usuario
+  (`buyerName`, nombres, código) se escapan antes de interpolarse en el `html`.
+- **`quantity` deja de ser entrada.** Se deriva de `attendees.length` (se quitó
+  del input/schema/`refine`/form). La columna `quantity` de Supabase se sigue
+  poblando desde `attendees.length`.
+- **Adapters perezosos en la API route.** `buildDeps()` se invoca en el primer
+  request (memoizado por proceso), no al importar el módulo: `next build` evalúa
+  rutas sin variables de entorno y con el throw nuevo el build fallaba.
+
+Verificación: `typecheck`, `lint`, `build` OK · 49 tests · 100% en `src/core`.
+
 ## Pendiente / próximo
 
 - Fase 2: adapter Mercado Pago + webhook + estado `paid`; PayPal y transferencia.
 - Persistir adapter de Supabase con RLS real + migración SQL.
+- Reintento durable de la sync de emergencia (hoy best-effort + `console.error`).
+- Idempotencia de `save` para evitar duplicados ante reintento del cliente.
 - i18n (inglés) si se confirma.
 - Resolver hosting + facturación DGI antes de abrir venta real.

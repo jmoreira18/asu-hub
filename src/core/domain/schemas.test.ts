@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseRegistrationInput, attendeeSchema } from './schemas';
 import { ValidationError } from './errors';
-import type { Attendee } from './types';
+import { MAX_ATTENDEES, type Attendee } from './types';
 
 const validAttendee = (over: Partial<Attendee> = {}): Attendee => ({
   fullName: 'Ana Pérez',
@@ -17,7 +17,6 @@ const validAttendee = (over: Partial<Attendee> = {}): Attendee => ({
 const validInput = (over: Record<string, unknown> = {}) => ({
   buyerName: 'Ana Pérez',
   buyerEmail: 'ana@example.com',
-  quantity: 1,
   attendees: [validAttendee()],
   ...over,
 });
@@ -29,9 +28,9 @@ describe('parseRegistrationInput', () => {
     expect(data.attendees).toHaveLength(1);
   });
 
-  it('acepta cantidad > 1 con un asistente por cada uno', () => {
+  it('acepta varios asistentes', () => {
     const data = parseRegistrationInput(
-      validInput({ quantity: 2, attendees: [validAttendee(), validAttendee({ fullName: 'Bob' })] }),
+      validInput({ attendees: [validAttendee(), validAttendee({ fullName: 'Bob' })] }),
     );
     expect(data.attendees).toHaveLength(2);
   });
@@ -42,30 +41,19 @@ describe('parseRegistrationInput', () => {
     );
   });
 
-  it('rechaza cantidad que no coincide con asistentes', () => {
+  it('rechaza lista de asistentes vacía', () => {
+    expect(() => parseRegistrationInput(validInput({ attendees: [] }))).toThrow(ValidationError);
+  });
+
+  it('rechaza más asistentes que el tope permitido', () => {
+    const tooMany = Array.from({ length: MAX_ATTENDEES + 1 }, () => validAttendee());
     try {
-      parseRegistrationInput(validInput({ quantity: 3 }));
+      parseRegistrationInput(validInput({ attendees: tooMany }));
       expect.unreachable('debió lanzar');
     } catch (e) {
       expect(e).toBeInstanceOf(ValidationError);
       expect((e as ValidationError).issues.attendees).toBeDefined();
     }
-  });
-
-  it('rechaza cantidad no entera', () => {
-    expect(() => parseRegistrationInput(validInput({ quantity: 1.5 }))).toThrow(ValidationError);
-  });
-
-  it('rechaza cantidad <= 0', () => {
-    expect(() => parseRegistrationInput(validInput({ quantity: 0, attendees: [] }))).toThrow(
-      ValidationError,
-    );
-  });
-
-  it('rechaza lista de asistentes vacía', () => {
-    expect(() =>
-      parseRegistrationInput(validInput({ quantity: 1, attendees: [] })),
-    ).toThrow(ValidationError);
   });
 
   it('agrupa issues por ruta de campo', () => {

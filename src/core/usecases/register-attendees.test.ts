@@ -6,7 +6,6 @@ import type { Attendee, Registration } from '../domain/types';
 const validInput = () => ({
   buyerName: 'Ana Pérez',
   buyerEmail: 'ana@example.com',
-  quantity: 1,
   attendees: [
     {
       fullName: 'Ana Pérez',

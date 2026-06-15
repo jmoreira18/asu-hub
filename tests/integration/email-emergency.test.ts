@@ -9,7 +9,6 @@ const reg: Registration = {
   id: 'reg-1',
   buyerName: 'Ana',
   buyerEmail: 'ana@example.com',
-  quantity: 2,
   status: 'confirmed',
   createdAt: new Date('2026-06-14T00:00:00Z'),
   attendees: [

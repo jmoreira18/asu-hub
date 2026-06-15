@@ -6,7 +6,6 @@ import type { RegistrationInput } from '@core/domain/types';
 const input: RegistrationInput = {
   buyerName: 'Ana',
   buyerEmail: 'ana@example.com',
-  quantity: 1,
   attendees: [
     {
       fullName: 'Ana',
@@ -55,7 +54,6 @@ describe('SupabaseStorage (fetch mockeado)', () => {
           id: 'reg-1',
           buyer_name: 'Ana',
           buyer_email: 'ana@example.com',
-          quantity: 1,
           attendees: input.attendees,
           status: 'confirmed',
           created_at: '2026-06-14T00:00:00Z',
@@ -90,7 +88,6 @@ describe('SupabaseStorage (fetch mockeado)', () => {
           id: 'reg-1',
           buyer_name: 'Ana',
           buyer_email: 'a@a.com',
-          quantity: 1,
           attendees: input.attendees,
           status: 'confirmed',
           created_at: '2026-06-14T00:00:00Z',

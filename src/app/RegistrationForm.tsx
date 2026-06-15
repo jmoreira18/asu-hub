@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { EXPERIENCE_LEVELS, type Attendee } from '@core/domain/types';
+import { EXPERIENCE_LEVELS, MAX_ATTENDEES, type Attendee } from '@core/domain/types';
 
 const emptyAttendee = (): Attendee => ({
   fullName: '',
@@ -25,7 +25,7 @@ export function RegistrationForm() {
   const [emailSent, setEmailSent] = useState(false);
 
   const setQuantity = (n: number) => {
-    const next = Math.max(1, n || 1);
+    const next = Math.min(MAX_ATTENDEES, Math.max(1, n || 1));
     setAttendees((prev) => {
       const copy = [...prev];
       while (copy.length < next) copy.push(emptyAttendee());
@@ -52,7 +52,7 @@ export function RegistrationForm() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerName, buyerEmail, quantity: attendees.length, attendees }),
+        body: JSON.stringify({ buyerName, buyerEmail, attendees }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -112,6 +112,7 @@ export function RegistrationForm() {
             name="quantity"
             type="number"
             min={1}
+            max={MAX_ATTENDEES}
             value={attendees.length}
             onChange={(e) => setQuantity(Number(e.target.value))}
           />

@@ -34,4 +34,10 @@ describe('buildDeps', () => {
       buildDeps({ SUPABASE_URL: 'https://x.supabase.co' } as unknown as NodeJS.ProcessEnv),
     ).toThrow(/SUPABASE_SERVICE_KEY/);
   });
+
+  it('en producción lanza si falta un grupo en vez de caer en memoria', () => {
+    expect(() =>
+      buildDeps({ NODE_ENV: 'production' } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/producción/);
+  });
 });

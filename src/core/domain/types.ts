@@ -32,11 +32,16 @@ export interface Attendee {
   waiverAccepted: boolean;
 }
 
-/** Datos que llegan del formulario antes de persistir. */
+/** Tope de asistentes por registro (evita payloads abusivos en el endpoint). */
+export const MAX_ATTENDEES = 20;
+
+/**
+ * Datos que llegan del formulario antes de persistir.
+ * La cantidad se deriva de `attendees.length`; no es un campo aparte.
+ */
 export interface RegistrationInput {
   buyerName: string;
   buyerEmail: string;
-  quantity: number;
   attendees: Attendee[];
 }
 

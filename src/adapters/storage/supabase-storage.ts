@@ -17,7 +17,6 @@ interface Row {
   id: string;
   buyer_name: string;
   buyer_email: string;
-  quantity: number;
   attendees: Registration['attendees'];
   status: RegistrationStatus;
   created_at: string;
@@ -54,7 +53,6 @@ export class SupabaseStorage implements StoragePort {
       id: row.id,
       buyerName: row.buyer_name,
       buyerEmail: row.buyer_email,
-      quantity: row.quantity,
       attendees: row.attendees,
       status: row.status,
       createdAt: new Date(row.created_at),
@@ -68,7 +66,8 @@ export class SupabaseStorage implements StoragePort {
       body: JSON.stringify({
         buyer_name: input.buyerName,
         buyer_email: input.buyerEmail,
-        quantity: input.quantity,
+        // Columna derivada: la fuente de verdad es attendees.
+        quantity: input.attendees.length,
         attendees: input.attendees,
         status,
       }),

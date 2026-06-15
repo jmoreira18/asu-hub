@@ -8,6 +8,16 @@ export interface ResendEmailConfig {
   fetchImpl?: FetchLike;
 }
 
+/** Escapa texto provisto por el usuario antes de interpolarlo en HTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Adapter de email vía API REST de Resend. */
 export class ResendEmail implements EmailPort {
   private readonly fetchImpl: FetchLike;
@@ -17,7 +27,10 @@ export class ResendEmail implements EmailPort {
   }
 
   async sendConfirmation(registration: Registration): Promise<void> {
-    const nombres = registration.attendees.map((a) => a.fullName).join(', ');
+    // Campos provistos por el usuario: escapar para evitar inyección de HTML.
+    const nombres = registration.attendees.map((a) => escapeHtml(a.fullName)).join(', ');
+    const buyerName = escapeHtml(registration.buyerName);
+    const cantidad = registration.attendees.length;
     const res = await this.fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -29,9 +42,9 @@ export class ResendEmail implements EmailPort {
         to: registration.buyerEmail,
         subject: 'Confirmación de registro — Evento ASU',
         html:
-          `<p>Hola ${registration.buyerName},</p>` +
-          `<p>Tu registro quedó confirmado para ${registration.quantity} persona(s): ${nombres}.</p>` +
-          `<p>Código: ${registration.id}</p>`,
+          `<p>Hola ${buyerName},</p>` +
+          `<p>Tu registro quedó confirmado para ${cantidad} persona(s): ${nombres}.</p>` +
+          `<p>Código: ${escapeHtml(registration.id)}</p>`,
       }),
     });
     if (!res.ok) throw new Error(`Resend falló: ${res.status}`);
