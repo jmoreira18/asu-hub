@@ -12,6 +12,17 @@ export const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'] as con
 /** Nivel de experiencia declarado por el asistente. */
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
 
+/**
+ * Categorías de precio (Fase 2). Los socios de ASU pagan distinto (ej: solo
+ * remera) que los no-socios. Cómo se determina si un asistente es socio es una
+ * decisión de producto abierta (campo del formulario vs lista de socios); por
+ * ahora el dominio solo modela la categoría y `computePrice` la usa.
+ */
+export const PRICE_CATEGORIES = ['socio', 'no-socio'] as const;
+
+/** Categoría de precio de un asistente. */
+export type PriceCategory = (typeof PRICE_CATEGORIES)[number];
+
 /** Contacto de emergencia de un asistente. */
 export interface EmergencyContact {
   name: string;
@@ -30,6 +41,11 @@ export interface Attendee {
   medicalInsurance: string;
   /** Aceptación del deslinde de responsabilidad. Debe ser true. */
   waiverAccepted: boolean;
+  /**
+   * Categoría de precio (Fase 2). Opcional: el formulario de Fase 1 no la
+   * recolecta todavía. `computePrice` la trata como `'no-socio'` si está ausente.
+   */
+  category?: PriceCategory;
 }
 
 /** Tope de asistentes por registro (evita payloads abusivos en el endpoint). */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRegistrationInput, attendeeSchema } from './schemas';
+import { parseRegistrationInput, attendeeSchema, parsePricingConfig } from './schemas';
 import { ValidationError } from './errors';
 import { MAX_ATTENDEES, type Attendee } from './types';
 
@@ -107,5 +107,42 @@ describe('attendeeSchema (deslinde obligatorio)', () => {
     const r = attendeeSchema.safeParse(validAttendee({ fullName: '  Ana  ' }));
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.fullName).toBe('Ana');
+  });
+});
+
+describe('parsePricingConfig', () => {
+  const validConfig = () => ({
+    currency: 'UYU',
+    tiers: [
+      {
+        id: 'early',
+        from: '2026-01-01T00:00:00Z',
+        to: '2026-06-01T00:00:00Z',
+        prices: { socio: 10000, 'no-socio': 30000 },
+      },
+    ],
+  });
+
+  it('acepta config válida y coacciona fechas desde strings ISO', () => {
+    const cfg = parsePricingConfig(validConfig());
+    expect(cfg.currency).toBe('UYU');
+    expect(cfg.tiers[0]?.from).toBeInstanceOf(Date);
+    expect(cfg.tiers[0]?.prices.socio).toBe(10000);
+  });
+
+  it('rechaza tanda con from >= to', () => {
+    const bad = validConfig();
+    bad.tiers[0]!.to = '2026-01-01T00:00:00Z';
+    expect(() => parsePricingConfig(bad)).toThrow(ValidationError);
+  });
+
+  it('rechaza precios no enteros o negativos', () => {
+    const bad = validConfig();
+    bad.tiers[0]!.prices.socio = -5;
+    expect(() => parsePricingConfig(bad)).toThrow(ValidationError);
+  });
+
+  it('rechaza lista de tandas vacía', () => {
+    expect(() => parsePricingConfig({ currency: 'UYU', tiers: [] })).toThrow(ValidationError);
   });
 });

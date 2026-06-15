@@ -1,8 +1,10 @@
 # Flujo de pago (Fase 2 — diseño)
 
-> **Estado:** NO implementado. La interfaz `PaymentProvider` ya existe en
-> `src/core/ports/payment.ts` para que el dominio quede listo sin acoplarse a
-> Mercado Pago. Este doc describe cómo se enchufará.
+> **Estado:** esqueleto implementado (ver `docs/dev-memory/0002`). Funciona
+> end-to-end con adapters dev / `fetch` mockeado; **falta enchufar credenciales
+> reales de Mercado Pago** y la facturación DGI. El monto se calcula server-side
+> (`src/core/domain/pricing.ts`); el webhook valida firma y verifica contra la
+> API antes de confirmar.
 
 ## Por qué Mercado Pago (y no una tiquetera)
 
@@ -59,5 +61,16 @@ graph LR
     D --> E[5. Tests unit + integration]
 ```
 
-Bloqueantes externos (no técnicos): cuenta Mercado Pago, credenciales, y
-**facturación DGI** con contador (ver README del plan).
+Pasos 1-5: **hechos a nivel esqueleto** (`docs/dev-memory/0002`). Además:
+`startPayment` + `POST /api/payments` para iniciar, y `pricing.ts` para el monto.
+
+Pendiente para cobrar de verdad:
+
+- Credenciales **TEST** de Mercado Pago en `.env.local` / hosting (nunca en git
+  ni en el chat). `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` son secretos de
+  servidor; nunca `NEXT_PUBLIC_`.
+- Configurar el webhook en el panel de MP apuntando a una **URL pública HTTPS**
+  estable (`/api/payments/webhook`). Un túnel/CDN sobre un server local sirve
+  para sandbox; producción mejor en host siempre-encendido.
+- `PRICING_CONFIG` real (tandas + precios por categoría) provista por ASU.
+- **Facturación DGI** con contador (bloqueante no técnico).

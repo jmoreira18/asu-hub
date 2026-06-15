@@ -1,8 +1,19 @@
 import { z } from 'zod';
-import { EXPERIENCE_LEVELS, MAX_ATTENDEES } from './types';
+import { EXPERIENCE_LEVELS, MAX_ATTENDEES, PRICE_CATEGORIES } from './types';
 import { ValidationError } from './errors';
+import type { PricingConfig } from './pricing';
 
 const nonEmpty = (campo: string) => z.string().trim().min(1, `${campo} es obligatorio`);
+
+/** Agrupa los issues de zod por ruta de campo: `ruta -> [mensajes]`. */
+function issuesByPath(error: z.ZodError): Record<string, string[]> {
+  const issues: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.join('.') || '_';
+    (issues[key] ??= []).push(issue.message);
+  }
+  return issues;
+}
 
 export const emergencyContactSchema = z.object({
   name: nonEmpty('Nombre del contacto de emergencia'),
@@ -34,20 +45,54 @@ export const registrationInputSchema = z.object({
 });
 
 /**
+ * Schema de configuración de precios (Fase 2). Valida la `PricingConfig` que el
+ * factory carga desde env/DB. Precios en centavos enteros no negativos; fechas
+ * coercibles (acepta strings ISO de JSON).
+ */
+const tierPricesSchema = z.object(
+  Object.fromEntries(
+    PRICE_CATEGORIES.map((cat) => [cat, z.number().int().nonnegative()]),
+  ) as Record<(typeof PRICE_CATEGORIES)[number], z.ZodNumber>,
+);
+
+export const pricingConfigSchema = z.object({
+  currency: nonEmpty('Moneda'),
+  tiers: z
+    .array(
+      z
+        .object({
+          id: nonEmpty('Id de tanda'),
+          from: z.coerce.date(),
+          to: z.coerce.date(),
+          prices: tierPricesSchema,
+        })
+        .refine((t) => t.from.getTime() < t.to.getTime(), {
+          message: 'El inicio de la tanda debe ser anterior al fin',
+        }),
+    )
+    .min(1, 'Debe haber al menos una tanda de precios'),
+});
+
+/**
+ * Valida y tipa una `PricingConfig` cruda (ej: JSON de una env var).
+ * Lanza {@link ValidationError} con detalle por campo si algo falla.
+ */
+export function parsePricingConfig(raw: unknown): PricingConfig {
+  const result = pricingConfigSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ValidationError('Configuración de precios inválida', issuesByPath(result.error));
+  }
+  return result.data;
+}
+
+/**
  * Valida la entrada del formulario y devuelve datos tipados.
  * Lanza {@link ValidationError} con detalle por campo si algo falla.
  */
 export function parseRegistrationInput(raw: unknown) {
   const result = registrationInputSchema.safeParse(raw);
   if (!result.success) {
-    const issues: Record<string, string[]> = {};
-    for (const issue of result.error.issues) {
-      const key = issue.path.join('.') || '_';
-      const messages = issues[key] ?? [];
-      messages.push(issue.message);
-      issues[key] = messages;
-    }
-    throw new ValidationError('Datos de registración inválidos', issues);
+    throw new ValidationError('Datos de registración inválidos', issuesByPath(result.error));
   }
   return result.data;
 }

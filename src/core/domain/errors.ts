@@ -22,3 +22,11 @@ export class InvalidTransitionError extends Error {
     this.name = 'InvalidTransitionError';
   }
 }
+
+/** No hay una tanda de precios vigente para la fecha dada (Fase 2). */
+export class PricingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PricingError';
+  }
+}
