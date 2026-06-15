@@ -20,3 +20,6 @@ next-env.d.ts
 # misc
 .DS_Store
 *.tsbuildinfo
+
+# notas locales
+.claude/TODO.md
