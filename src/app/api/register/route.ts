@@ -16,8 +16,19 @@ export async function POST(request: Request) {
 
   try {
     const result = await handle(body);
+    if (!result.emergencySynced) {
+      // Registro persistido pero la planilla de emergencia no se sincronizó:
+      // requiere reintento manual/automático. No rompe el registro.
+      console.error(
+        `[register] emergencia NO sincronizada para registro ${result.registration.id}`,
+      );
+    }
     return NextResponse.json(
-      { id: result.registration.id, emailSent: result.emailSent },
+      {
+        id: result.registration.id,
+        emergencySynced: result.emergencySynced,
+        emailSent: result.emailSent,
+      },
       { status: 201 },
     );
   } catch (err) {

@@ -28,4 +28,10 @@ describe('buildDeps', () => {
     expect(deps.email).toBeInstanceOf(ResendEmail);
     expect(deps.emergency).toBeInstanceOf(GoogleSheetsExport);
   });
+
+  it('lanza si un grupo está configurado a medias (evita fallback silencioso)', () => {
+    expect(() =>
+      buildDeps({ SUPABASE_URL: 'https://x.supabase.co' } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/SUPABASE_SERVICE_KEY/);
+  });
 });

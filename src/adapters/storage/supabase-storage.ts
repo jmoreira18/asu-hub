@@ -81,7 +81,7 @@ export class SupabaseStorage implements StoragePort {
   }
 
   async findById(id: string): Promise<Registration | null> {
-    const res = await this.fetchImpl(this.endpoint(`?id=eq.${id}&select=*`), {
+    const res = await this.fetchImpl(this.endpoint(`?id=eq.${encodeURIComponent(id)}&select=*`), {
       headers: this.headers,
     });
     if (!res.ok) throw new Error(`Supabase findById falló: ${res.status}`);
@@ -91,7 +91,7 @@ export class SupabaseStorage implements StoragePort {
   }
 
   async updateStatus(id: string, status: RegistrationStatus): Promise<void> {
-    const res = await this.fetchImpl(this.endpoint(`?id=eq.${id}`), {
+    const res = await this.fetchImpl(this.endpoint(`?id=eq.${encodeURIComponent(id)}`), {
       method: 'PATCH',
       headers: this.headers,
       body: JSON.stringify({ status }),

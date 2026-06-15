@@ -13,6 +13,8 @@ export interface RegisterAttendeesDeps {
 
 export interface RegisterAttendeesResult {
   registration: Registration;
+  /** La planilla de emergencia se sincronizó OK. Si false, requiere reintento. */
+  emergencySynced: boolean;
   /** El registro siempre se guarda; el email es best-effort. */
   emailSent: boolean;
 }
@@ -22,9 +24,14 @@ export interface RegisterAttendeesResult {
  *
  * Orden por criticidad:
  *  1. Validar entrada (lanza ValidationError).
- *  2. Guardar como `confirmed` (fuente de verdad — crítico).
- *  3. Sincronizar planilla de emergencia (seguridad — crítico).
- *  4. Enviar email de confirmación (best-effort — no rompe el registro).
+ *  2. Guardar como `confirmed` (fuente de verdad — crítico, puede lanzar).
+ *  3. Sincronizar planilla de emergencia (best-effort tras persistir).
+ *  4. Enviar email de confirmación (best-effort).
+ *
+ * Una vez persistido el registro NO se lanza por fallos de sync/email: el
+ * registro es la fuente de verdad. Lanzar después de guardar haría que el
+ * cliente reintente y cree un registro duplicado (`save` no es idempotente).
+ * Los flags devueltos permiten reintentar sync/email por separado.
  */
 export function registerAttendees(deps: RegisterAttendeesDeps) {
   return async (rawInput: unknown): Promise<RegisterAttendeesResult> => {
@@ -33,7 +40,15 @@ export function registerAttendees(deps: RegisterAttendeesDeps) {
     const status = transition('draft', 'confirm');
     const registration = await deps.storage.save(input, status);
 
-    await deps.emergency.sync(registration);
+    let emergencySynced = false;
+    try {
+      await deps.emergency.sync(registration);
+      emergencySynced = true;
+    } catch {
+      // El registro ya está persistido; no revertimos ni reintentamos en
+      // línea para no duplicar. Se reintenta la sync aparte.
+      emergencySynced = false;
+    }
 
     let emailSent = false;
     try {
@@ -45,6 +60,6 @@ export function registerAttendees(deps: RegisterAttendeesDeps) {
       emailSent = false;
     }
 
-    return { registration, emailSent };
+    return { registration, emergencySynced, emailSent };
   };
 }

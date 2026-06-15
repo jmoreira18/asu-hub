@@ -52,6 +52,7 @@ describe('registerAttendees', () => {
     expect(deps.storage.save).toHaveBeenCalledWith(expect.anything(), 'confirmed');
     expect(deps.emergency.sync).toHaveBeenCalledWith(result.registration);
     expect(deps.email.sendConfirmation).toHaveBeenCalledWith(result.registration);
+    expect(result.emergencySynced).toBe(true);
     expect(result.emailSent).toBe(true);
     expect(result.registration.id).toBe('reg-1');
   });
@@ -64,10 +65,15 @@ describe('registerAttendees', () => {
     expect(deps.emergency.sync).not.toHaveBeenCalled();
   });
 
-  it('no envía email si la sincronización de emergencia falla (crítico)', async () => {
+  it('no revierte ni lanza si falla la sync de emergencia tras persistir', async () => {
+    // Lanzar tras guardar haría que el cliente reintente y duplique el registro.
     deps.emergency.sync = vi.fn().mockRejectedValue(new Error('sheets down'));
-    await expect(registerAttendees(deps)(validInput())).rejects.toThrow('sheets down');
-    expect(deps.email.sendConfirmation).not.toHaveBeenCalled();
+    const result = await registerAttendees(deps)(validInput());
+    expect(result.emergencySynced).toBe(false);
+    expect(result.registration.id).toBe('reg-1');
+    // El email sigue siendo best-effort e independiente de la sync.
+    expect(deps.email.sendConfirmation).toHaveBeenCalled();
+    expect(result.emailSent).toBe(true);
   });
 
   it('el registro sobrevive a un fallo de email (best-effort)', async () => {

@@ -22,6 +22,7 @@ export function RegistrationForm() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [confirmationId, setConfirmationId] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const setQuantity = (n: number) => {
     const next = Math.max(1, n || 1);
@@ -60,6 +61,7 @@ export function RegistrationForm() {
         return;
       }
       setConfirmationId(data.id);
+      setEmailSent(Boolean(data.emailSent));
       setStatus('done');
     } catch {
       setError('No se pudo conectar. Intentá de nuevo.');
@@ -72,7 +74,11 @@ export function RegistrationForm() {
       <div className="success" role="status">
         <h2>¡Registro confirmado!</h2>
         <p>Tu código de registro es <strong>{confirmationId}</strong>.</p>
-        <p>Te enviamos un email de confirmación.</p>
+        {emailSent ? (
+          <p>Te enviamos un email de confirmación.</p>
+        ) : (
+          <p>Guardá este código: no pudimos enviarte el email de confirmación.</p>
+        )}
       </div>
     );
   }
