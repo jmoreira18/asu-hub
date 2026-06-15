@@ -31,8 +31,10 @@ humano.
 
 ### Seguridad (CI)
 
-- **CodeQL** (`.github/workflows/codeql.yml`) — SAST nativo, `security-extended`,
-  PR + push + semanal. Gratis en repo público.
+- **CodeQL** — vía **default setup** del repo (Settings → Code security), no
+  workflow propio. Un `codeql.yml` advanced choca: "CodeQL analyses from advanced
+  configurations cannot be processed when the default setup is enabled". El
+  default setup cubre JS/TS + actions gratis.
 - **Semgrep OSS** (`.github/workflows/semgrep.yml`) — rulesets `p/default`,
   `typescript`, `react`, `nextjs`, `owasp-top-ten`, `secrets`. Modo OSS, sin
   cuenta ni upload.
