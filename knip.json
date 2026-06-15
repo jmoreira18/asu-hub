@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,route,template,loading,error,not-found,default}.{ts,tsx}",
+    "tests/**/*.{test,spec}.ts",
+    "tests/e2e/**/*.spec.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/core/ports/payment.ts"],
+  "ignoreBinaries": ["allure"],
+  "ignoreDependencies": ["@vitejs/plugin-react", "eslint-config-next"],
+  "rules": {
+    "exports": "off",
+    "types": "off",
+    "enumMembers": "off",
+    "nsExports": "off",
+    "nsTypes": "off"
+  }
+}

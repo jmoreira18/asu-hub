@@ -1,0 +1,13 @@
+# Markdown queda fuera: docs hechos a mano, y Prettier rompe globs como
+# `src/core/**` dentro de backticks. El lint de prosa no aporta acá.
+*.md
+**/*.md
+
+# Generados / artefactos
+.next/
+coverage/
+allure-results/
+allure-report/
+playwright-report/
+test-results/
+package-lock.json

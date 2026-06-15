@@ -4,10 +4,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'ASU — Registro de evento',
-  description: 'Registro y entradas para eventos de highline de la Asociación de Slackline Uruguaya',
+  description:
+    'Registro y entradas para eventos de highline de la Asociación de Slackline Uruguaya',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es">
       <body>{children}</body>

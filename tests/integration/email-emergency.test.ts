@@ -36,7 +36,9 @@ const reg: Registration = {
 describe('ResendEmail (fetch mockeado)', () => {
   it('hace POST a la API con el destinatario', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response);
-    await new ResendEmail({ apiKey: 'k', from: 'no-reply@asu.uy', fetchImpl }).sendConfirmation(reg);
+    await new ResendEmail({ apiKey: 'k', from: 'no-reply@asu.uy', fetchImpl }).sendConfirmation(
+      reg,
+    );
     const [url, opts] = fetchImpl.mock.calls[0]!;
     expect(url).toBe('https://api.resend.com/emails');
     expect((opts as RequestInit).body).toContain('ana@example.com');

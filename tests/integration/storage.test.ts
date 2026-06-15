@@ -44,8 +44,7 @@ describe('MemoryStorage', () => {
 });
 
 describe('SupabaseStorage (fetch mockeado)', () => {
-  const ok = (body: unknown) =>
-    ({ ok: true, status: 200, json: async () => body }) as Response;
+  const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body }) as Response;
 
   it('save hace POST y mapea la fila devuelta', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(

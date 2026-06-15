@@ -1,0 +1,10 @@
+# Config gitleaks: hereda el ruleset base + allowlist de archivos plantilla.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Plantillas y ejemplos: no contienen secretos reales."
+paths = [
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+]

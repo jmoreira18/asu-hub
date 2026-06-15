@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { EXPERIENCE_LEVELS, MAX_ATTENDEES, type Attendee } from '@core/domain/types';
 
 const emptyAttendee = (): Attendee => ({
@@ -44,7 +44,7 @@ export function RegistrationForm() {
       ),
     );
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus('sending');
     setError(null);
@@ -73,7 +73,9 @@ export function RegistrationForm() {
     return (
       <div className="success" role="status">
         <h2>¡Registro confirmado!</h2>
-        <p>Tu código de registro es <strong>{confirmationId}</strong>.</p>
+        <p>
+          Tu código de registro es <strong>{confirmationId}</strong>.
+        </p>
         {emailSent ? (
           <p>Te enviamos un email de confirmación.</p>
         ) : (
@@ -200,12 +202,19 @@ export function RegistrationForm() {
               onChange={(e) => updateAttendee(i, { waiverAccepted: e.target.checked })}
               required
             />
-            Acepto el <a href={WAIVER_URL} target="_blank" rel="noreferrer">deslinde de responsabilidad</a>
+            Acepto el{' '}
+            <a href={WAIVER_URL} target="_blank" rel="noreferrer">
+              deslinde de responsabilidad
+            </a>
           </label>
         </fieldset>
       ))}
 
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       <button type="submit" disabled={status === 'sending'}>
         {status === 'sending' ? 'Enviando…' : 'Registrarme'}
       </button>

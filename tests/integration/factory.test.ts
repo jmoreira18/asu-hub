@@ -36,8 +36,8 @@ describe('buildDeps', () => {
   });
 
   it('en producción lanza si falta un grupo en vez de caer en memoria', () => {
-    expect(() =>
-      buildDeps({ NODE_ENV: 'production' } as unknown as NodeJS.ProcessEnv),
-    ).toThrow(/producción/);
+    expect(() => buildDeps({ NODE_ENV: 'production' } as unknown as NodeJS.ProcessEnv)).toThrow(
+      /producción/,
+    );
   });
 });
