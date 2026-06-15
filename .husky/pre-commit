@@ -1,0 +1,11 @@
+# lint + formato solo sobre archivos staged (rápido).
+npx lint-staged
+
+# Secret scan sobre el diff staged. No-op si gitleaks no está instalado localmente
+# (la red de seguridad real es el job de CI; esto es feedback temprano opcional).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner
+fi
+
+# Chequeo de tipos completo (repo chico, corre en ~1s).
+npm run typecheck

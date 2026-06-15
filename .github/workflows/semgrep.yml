@@ -1,0 +1,27 @@
+name: Semgrep — SAST (OSS)
+
+# Semgrep en modo OSS: reglas comunitarias, sin cuenta ni upload externo.
+# Bloquea el PR si encuentra findings (exit code != 0).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  semgrep:
+    name: scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    # Sin SEMGREP_APP_TOKEN → modo OSS local, no sube nada.
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          semgrep ci
+          --config p/default
+          --config p/typescript
+          --config p/react
+          --config p/nextjs
+          --config p/owasp-top-ten
+          --config p/secrets

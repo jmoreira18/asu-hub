@@ -8,7 +8,8 @@ import { buildDeps } from '@adapters/factory';
 // `next build` evalúa rutas sin variables de entorno y buildDeps lanzaría.
 let handle: ReturnType<typeof registerAttendees> | null = null;
 function getHandle() {
-  return (handle ??= registerAttendees(buildDeps()));
+  handle ??= registerAttendees(buildDeps());
+  return handle;
 }
 
 export async function POST(request: Request) {

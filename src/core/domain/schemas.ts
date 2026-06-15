@@ -43,7 +43,9 @@ export function parseRegistrationInput(raw: unknown) {
     const issues: Record<string, string[]> = {};
     for (const issue of result.error.issues) {
       const key = issue.path.join('.') || '_';
-      (issues[key] ??= []).push(issue.message);
+      const messages = issues[key] ?? [];
+      messages.push(issue.message);
+      issues[key] = messages;
     }
     throw new ValidationError('Datos de registración inválidos', issues);
   }

@@ -1,6 +1,7 @@
 name: PR — lint, types, unit + integration
 
 # Rápido en cada PR. Sin Allure (eso se reserva para E2E en release).
+# Todos los steps son bloqueantes: si alguno falla, no se mergea.
 on:
   pull_request:
   push:
@@ -17,6 +18,23 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
+      # Código y dependencias muertas.
+      - run: npm run knip
       # Vitest corre unit + integration y aplica el gate de 100% sobre src/core.
       - run: npm run test:cov
+      # Vulnerabilidades en dependencias de producción (high+). Las dev y las
+      # moderadas las trackea Dependabot sin bloquear el PR.
+      - run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

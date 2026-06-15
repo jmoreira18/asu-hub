@@ -69,7 +69,10 @@ export function buildDeps(env: NodeJS.ProcessEnv = process.env): RegisterAttende
 
   const emergency = pickGroup<EmergencyExportPort>(
     'emergencia (Google Sheets)',
-    { SHEETS_WEBHOOK_URL: env.SHEETS_WEBHOOK_URL, SHEETS_WEBHOOK_SECRET: env.SHEETS_WEBHOOK_SECRET },
+    {
+      SHEETS_WEBHOOK_URL: env.SHEETS_WEBHOOK_URL,
+      SHEETS_WEBHOOK_SECRET: env.SHEETS_WEBHOOK_SECRET,
+    },
     () =>
       new GoogleSheetsExport({
         webhookUrl: env.SHEETS_WEBHOOK_URL!,
