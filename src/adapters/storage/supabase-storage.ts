@@ -20,6 +20,8 @@ interface Row {
   attendees: Registration['attendees'];
   status: RegistrationStatus;
   created_at: string;
+  locked_amount_cents?: number | null;
+  locked_currency?: string | null;
 }
 
 /**
@@ -56,6 +58,8 @@ export class SupabaseStorage implements StoragePort {
       attendees: row.attendees,
       status: row.status,
       createdAt: new Date(row.created_at),
+      lockedAmountCents: row.locked_amount_cents ?? undefined,
+      lockedCurrency: row.locked_currency ?? undefined,
     };
   }
 
@@ -96,5 +100,34 @@ export class SupabaseStorage implements StoragePort {
       body: JSON.stringify({ status }),
     });
     if (!res.ok) throw new Error(`Supabase updateStatus falló: ${res.status}`);
+  }
+
+  async compareAndSetStatus(
+    id: string,
+    expected: RegistrationStatus,
+    next: RegistrationStatus,
+  ): Promise<boolean> {
+    // Atómico en Postgres: UPDATE ... WHERE id=.. AND status=expected. Una
+    // reentrega concurrente del webhook matchea 0 filas y se descarta.
+    const res = await this.fetchImpl(
+      this.endpoint(`?id=eq.${encodeURIComponent(id)}&status=eq.${encodeURIComponent(expected)}`),
+      {
+        method: 'PATCH',
+        headers: { ...this.headers, Prefer: 'return=representation' },
+        body: JSON.stringify({ status: next }),
+      },
+    );
+    if (!res.ok) throw new Error(`Supabase compareAndSetStatus falló: ${res.status}`);
+    const rows = (await res.json()) as Row[];
+    return rows.length > 0;
+  }
+
+  async setPaymentQuote(id: string, amountCents: number, currency: string): Promise<void> {
+    const res = await this.fetchImpl(this.endpoint(`?id=eq.${encodeURIComponent(id)}`), {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify({ locked_amount_cents: amountCents, locked_currency: currency }),
+    });
+    if (!res.ok) throw new Error(`Supabase setPaymentQuote falló: ${res.status}`);
   }
 }

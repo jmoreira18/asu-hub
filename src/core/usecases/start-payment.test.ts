@@ -40,6 +40,8 @@ function makeDeps(reg: Registration | null = registration()): StartPaymentDeps {
       save: vi.fn(),
       findById: vi.fn().mockResolvedValue(reg),
       updateStatus: vi.fn(),
+      compareAndSetStatus: vi.fn().mockResolvedValue(true),
+      setPaymentQuote: vi.fn().mockResolvedValue(undefined),
     },
     payment: {
       createPayment: vi
@@ -64,6 +66,8 @@ describe('startPayment', () => {
     );
     expect(result.checkoutUrl).toBe('https://mp/checkout');
     expect(result.amountCents).toBe(30000);
+    // Bloquea el monto cotizado para que confirmPayment no recalcule con el reloj.
+    expect(deps.storage.setPaymentQuote).toHaveBeenCalledWith('reg-1', 30000, 'UYU');
   });
 
   it('lanza si la registración no existe', async () => {

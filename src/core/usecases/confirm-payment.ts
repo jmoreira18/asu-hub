@@ -58,24 +58,40 @@ export function confirmPayment(deps: ConfirmPaymentDeps) {
       return { confirmed: false, reason: 'registration-not-found' };
     }
 
-    const quote = computePrice(registration, deps.pricing, clock());
-    if (quote.amountCents !== verified.amountCents || quote.currency !== verified.currency) {
-      // El monto pagado no coincide con el esperado: posible manipulación o
-      // cambio de tanda entre createPayment y el pago. No confirmamos.
+    // Idempotencia: `paid` es terminal; el webhook se reentregó. No-op exitoso
+    // sin revalidar monto (ya se confirmó en su momento).
+    if (registration.status === 'paid') {
+      return { confirmed: true, alreadyProcessed: true, registration };
+    }
+
+    // Monto esperado = el bloqueado al iniciar el pago (no se recalcula con el
+    // reloj del webhook). Fallback al cálculo actual solo si no hay monto
+    // bloqueado (registración pre-Fase 2 o flujo sin startPayment).
+    const expectedCents =
+      registration.lockedAmountCents ?? computePrice(registration, deps.pricing, clock()).amountCents;
+    const expectedCurrency = registration.lockedCurrency ?? deps.pricing.currency;
+    if (expectedCents !== verified.amountCents || expectedCurrency !== verified.currency) {
+      // El monto pagado no coincide con el bloqueado: posible manipulación. No
+      // confirmamos.
       return { confirmed: false, reason: 'amount-mismatch' };
     }
 
     if (!canTransition(registration.status, 'pay')) {
-      // Idempotencia: si ya está `paid`, el webhook se reentregó; éxito no-op.
-      if (registration.status === 'paid') {
-        return { confirmed: true, alreadyProcessed: true, registration };
-      }
       // draft / cancelled: no se puede pagar desde ahí.
       return { confirmed: false, reason: 'invalid-state' };
     }
 
     const next = transition(registration.status, 'pay');
-    await deps.storage.updateStatus(registration.id, next);
+    // Transición atómica: si otra reentrega en paralelo ya ganó, no aplicamos ni
+    // reenviamos email/sync (éxito no-op idempotente).
+    const applied = await deps.storage.compareAndSetStatus(registration.id, registration.status, next);
+    if (!applied) {
+      return {
+        confirmed: true,
+        alreadyProcessed: true,
+        registration: { ...registration, status: next },
+      };
+    }
     const paid: Registration = { ...registration, status: next };
 
     // Best-effort: no se revierte el pago si falla email/sync.

@@ -48,6 +48,11 @@ export function startPayment(deps: StartPaymentDeps) {
       payerEmail: registration.buyerEmail,
     });
 
+    // Bloquea el monto cotizado: `confirmPayment` compara contra esto, no contra
+    // un recálculo con el reloj del webhook. Si la tanda cambia entre iniciar y
+    // pagar, el pago legítimo no se rechaza por falso mismatch.
+    await deps.storage.setPaymentQuote(registration.id, quote.amountCents, quote.currency);
+
     return { paymentId, checkoutUrl, amountCents: quote.amountCents, currency: quote.currency };
   };
 }

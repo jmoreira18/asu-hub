@@ -174,4 +174,8 @@ describe('loadPricingConfig', () => {
     const json = JSON.stringify({ currency: 'USD', tiers: [] });
     expect(() => loadPricingConfig(json)).toThrow();
   });
+
+  it('lanza ValidationError (no SyntaxError) si el JSON está malformado', () => {
+    expect(() => loadPricingConfig('{ no es json')).toThrow(/Configuración de precios inválida/);
+  });
 });

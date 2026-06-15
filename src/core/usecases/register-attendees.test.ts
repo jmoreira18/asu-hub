@@ -32,6 +32,8 @@ function makeDeps(): RegisterAttendeesDeps {
       save: vi.fn().mockResolvedValue(savedRegistration()),
       findById: vi.fn(),
       updateStatus: vi.fn(),
+      compareAndSetStatus: vi.fn(),
+      setPaymentQuote: vi.fn(),
     },
     emergency: { sync: vi.fn().mockResolvedValue(undefined) },
     email: { sendConfirmation: vi.fn().mockResolvedValue(undefined) },

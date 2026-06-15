@@ -32,6 +32,10 @@ export const attendeeSchema = z.object({
   waiverAccepted: z.literal(true, {
     errorMap: () => ({ message: 'Debe aceptar el deslinde de responsabilidad' }),
   }),
+  // `category` (socio/no-socio) NO se acepta del cliente: define el precio, así
+  // que dejarlo client-settable permitiría a un no-socio pagar como socio. Lo
+  // asigna el servidor (form admin / lista de socios — decisión de producto
+  // abierta). Hasta entonces `computePrice` trata todo como `no-socio`.
 });
 
 export const registrationInputSchema = z.object({

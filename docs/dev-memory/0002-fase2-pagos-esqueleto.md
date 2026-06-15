@@ -31,8 +31,25 @@ imposible leakear secretos y que ningún cobro dependa del navegador.
   `MP_WEBHOOK_SECRET` (mismo fail-fast en prod) + pricing.
 - **Routes:** `POST /api/payments` (iniciar) y `POST /api/payments/webhook`
   (valida firma → 401, idempotente, no loguea payload/secretos).
-- **Tests:** gate 100% en `src/core` + integración de adapters/factory (88 tests).
+- **Tests:** gate 100% en `src/core` + integración de adapters/factory (101 tests).
 - `.env.example`: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `PRICING_CONFIG`.
+
+### Hardening post-review (review 2)
+
+- **Monto bloqueado al iniciar.** `startPayment` persiste el monto cotizado
+  (`storage.setPaymentQuote` → columnas `locked_amount_cents`/`locked_currency`)
+  y `confirmPayment` compara contra ese monto, **no** recalcula con el reloj del
+  webhook. Elimina falsos `amount-mismatch` si cambia la tanda entre iniciar y
+  pagar (la plata ya estaba tomada). Fallback al recálculo solo si no hay lock.
+- **Idempotencia sin condición de carrera.** La transición a `paid` es atómica
+  vía `storage.compareAndSetStatus(id, 'confirmed', 'paid')` (en Supabase:
+  `UPDATE ... WHERE status='confirmed'`). Dos reentregas en paralelo: solo una
+  gana y manda email/sync; la otra es no-op. Antes el read→updateStatus podía
+  duplicar email + sync de emergencia.
+- **`PRICING_CONFIG` malformado** ahora tira `ValidationError` (no `SyntaxError`
+  crudo que rompía la primera request sin contexto).
+- **`category` no se acepta del cliente** (es client-set price → un no-socio
+  pagaría como socio). Lo asigna el servidor; documentado en `schemas.ts`.
 
 ## Por qué (decisiones)
 
@@ -42,7 +59,8 @@ imposible leakear secretos y que ningún cobro dependa del navegador.
   `verifyPayment` contra la API; se compara monto y moneda esperados. Mismatch →
   no se confirma (anti-manipulación / cambio de tanda).
 - **Idempotencia con la máquina de estados.** Si ya está `paid`, el webhook
-  reentregado es no-op exitoso (no se re-cobra ni re-emite).
+  reentregado es no-op exitoso (no se re-cobra ni re-emite). La transición es
+  **atómica** (`compareAndSetStatus`) para que reentregas en paralelo no dupliquen.
 - **Secretos solo server-side.** `MP_ACCESS_TOKEN`/`MP_WEBHOOK_SECRET` se leen
   solo en el factory; nunca `NEXT_PUBLIC_`, nunca en `src/core`/cliente. Con
   redirect a `init_point` no hace falta ningún secreto en el front.
@@ -55,8 +73,9 @@ imposible leakear secretos y que ningún cobro dependa del navegador.
   (default `no-socio`); falta decidir form vs lista de socios.
 - **Dónde vive la `PricingConfig`:** env JSON por ahora; modelar "evento" en DB
   con su precio queda para después.
-- **Monto bloqueado:** hoy `confirmPayment` recalcula con el reloj; si cambia la
-  tanda entre crear y pagar, da mismatch. TODO: persistir el monto al crear.
+- **Monto bloqueado:** resuelto (review 2) — se persiste al iniciar el pago en
+  `locked_amount_cents`/`locked_currency`. Pendiente: la migración real de esas
+  columnas en Supabase antes de conectar credenciales (ver `docs/data-model.md`).
 
 ## Próximo
 

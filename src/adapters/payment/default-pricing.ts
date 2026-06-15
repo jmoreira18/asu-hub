@@ -1,5 +1,6 @@
 import type { PricingConfig } from '@core/domain/pricing';
 import { parsePricingConfig } from '@core/domain/schemas';
+import { ValidationError } from '@core/domain/errors';
 
 /**
  * Config de precios de desarrollo: una única tanda amplia, para correr local y
@@ -24,5 +25,15 @@ export const DEV_PRICING: PricingConfig = {
  */
 export function loadPricingConfig(raw: string | undefined): PricingConfig {
   if (!raw) return DEV_PRICING;
-  return parsePricingConfig(JSON.parse(raw));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // JSON malformado: error claro (no un SyntaxError crudo que tira 500 sin
+    // contexto al construir las deps en la primera request).
+    throw new ValidationError('Configuración de precios inválida', {
+      PRICING_CONFIG: ['No es JSON válido'],
+    });
+  }
+  return parsePricingConfig(parsed);
 }

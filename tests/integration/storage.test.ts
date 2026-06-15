@@ -41,6 +41,32 @@ describe('MemoryStorage', () => {
   it('updateStatus lanza si no existe', async () => {
     await expect(new MemoryStorage().updateStatus('x', 'paid')).rejects.toThrow();
   });
+
+  it('compareAndSetStatus aplica solo si el estado actual coincide', async () => {
+    const s = new MemoryStorage();
+    const reg = await s.save(input, 'confirmed');
+    expect(await s.compareAndSetStatus(reg.id, 'confirmed', 'paid')).toBe(true);
+    // Segunda reentrega: ya no está en 'confirmed' => no aplica.
+    expect(await s.compareAndSetStatus(reg.id, 'confirmed', 'paid')).toBe(false);
+    expect((await s.findById(reg.id))?.status).toBe('paid');
+  });
+
+  it('compareAndSetStatus lanza si no existe', async () => {
+    await expect(new MemoryStorage().compareAndSetStatus('x', 'confirmed', 'paid')).rejects.toThrow();
+  });
+
+  it('setPaymentQuote persiste el monto bloqueado', async () => {
+    const s = new MemoryStorage();
+    const reg = await s.save(input, 'confirmed');
+    await s.setPaymentQuote(reg.id, 30000, 'UYU');
+    const found = await s.findById(reg.id);
+    expect(found?.lockedAmountCents).toBe(30000);
+    expect(found?.lockedCurrency).toBe('UYU');
+  });
+
+  it('setPaymentQuote lanza si no existe', async () => {
+    await expect(new MemoryStorage().setPaymentQuote('x', 1, 'UYU')).rejects.toThrow();
+  });
 });
 
 describe('SupabaseStorage (fetch mockeado)', () => {
@@ -120,5 +146,40 @@ describe('SupabaseStorage (fetch mockeado)', () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
     const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
     await expect(s.updateStatus('x', 'paid')).rejects.toThrow('500');
+  });
+
+  it('compareAndSetStatus filtra por estado esperado y devuelve si aplicó', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(ok([{ id: 'reg-1' }]));
+    const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
+    expect(await s.compareAndSetStatus('reg-1', 'confirmed', 'paid')).toBe(true);
+    const url = fetchImpl.mock.calls[0]![0] as string;
+    expect(url).toContain('status=eq.confirmed');
+  });
+
+  it('compareAndSetStatus devuelve false si no matcheó ninguna fila', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(ok([]));
+    const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
+    expect(await s.compareAndSetStatus('reg-1', 'confirmed', 'paid')).toBe(false);
+  });
+
+  it('compareAndSetStatus lanza si no es ok', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+    const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
+    await expect(s.compareAndSetStatus('x', 'confirmed', 'paid')).rejects.toThrow('500');
+  });
+
+  it('setPaymentQuote hace PATCH del monto bloqueado', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response);
+    const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
+    await s.setPaymentQuote('reg-1', 30000, 'UYU');
+    const init = fetchImpl.mock.calls[0]![1] as RequestInit;
+    expect(init.method).toBe('PATCH');
+    expect(init.body).toContain('locked_amount_cents');
+  });
+
+  it('setPaymentQuote lanza si no es ok', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+    const s = new SupabaseStorage({ url: 'https://x', serviceKey: 'k', fetchImpl });
+    await expect(s.setPaymentQuote('x', 1, 'UYU')).rejects.toThrow('500');
   });
 });

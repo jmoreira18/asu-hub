@@ -66,4 +66,14 @@ export interface Registration extends RegistrationInput {
   id: string;
   status: RegistrationStatus;
   createdAt: Date;
+  /**
+   * Monto bloqueado al iniciar el pago (Fase 2), en centavos. Se persiste en
+   * `startPayment` con el precio de la tanda vigente *en ese momento* y es el
+   * monto contra el que `confirmPayment` compara lo realmente pagado. Evita
+   * falsos rechazos si la tanda cambia entre iniciar y pagar (no se recalcula
+   * con el reloj del webhook). Ausente hasta que el pago se inicia.
+   */
+  lockedAmountCents?: number;
+  /** Moneda del monto bloqueado (ej: "UYU"). Ver {@link Registration.lockedAmountCents}. */
+  lockedCurrency?: string;
 }

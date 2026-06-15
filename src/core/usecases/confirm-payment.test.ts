@@ -50,6 +50,8 @@ function makeDeps(over: { reg?: Registration | null; verified?: VerifiedPayment 
       save: vi.fn(),
       findById: vi.fn().mockResolvedValue(over.reg === undefined ? registration() : over.reg),
       updateStatus: vi.fn().mockResolvedValue(undefined),
+      compareAndSetStatus: vi.fn().mockResolvedValue(true),
+      setPaymentQuote: vi.fn().mockResolvedValue(undefined),
     },
     payment: {
       createPayment: vi.fn(),
@@ -74,10 +76,37 @@ describe('confirmPayment', () => {
   it('confirma: transiciona a paid, manda email y sincroniza emergencia', async () => {
     const result = await confirmPayment(deps)('pay-1');
     expect(result).toMatchObject({ confirmed: true, alreadyProcessed: false });
-    expect(deps.storage.updateStatus).toHaveBeenCalledWith('reg-1', 'paid');
+    expect(deps.storage.compareAndSetStatus).toHaveBeenCalledWith('reg-1', 'confirmed', 'paid');
     expect(deps.email.sendConfirmation).toHaveBeenCalled();
     expect(deps.emergency.sync).toHaveBeenCalled();
     if (result.confirmed) expect(result.registration.status).toBe('paid');
+  });
+
+  it('compara contra el monto bloqueado, no recalcula con el reloj', async () => {
+    // lockedAmountCents=30000 viene de startPayment; aunque la tanda cambiara,
+    // se compara contra esto. verified paga 30000 => confirma.
+    const d = makeDeps({
+      reg: { ...registration(), lockedAmountCents: 30000, lockedCurrency: 'UYU' },
+    });
+    const result = await confirmPayment(d)('pay-1');
+    expect(result).toMatchObject({ confirmed: true, alreadyProcessed: false });
+  });
+
+  it('rechaza si lo pagado no coincide con el monto bloqueado', async () => {
+    const d = makeDeps({
+      reg: { ...registration(), lockedAmountCents: 99999, lockedCurrency: 'UYU' },
+    });
+    const result = await confirmPayment(d)('pay-1');
+    expect(result).toEqual({ confirmed: false, reason: 'amount-mismatch' });
+  });
+
+  it('reentrega en paralelo: si pierde la carrera, no reenvía email/sync', async () => {
+    const d = makeDeps();
+    d.storage.compareAndSetStatus = vi.fn().mockResolvedValue(false);
+    const result = await confirmPayment(d)('pay-1');
+    expect(result).toMatchObject({ confirmed: true, alreadyProcessed: true });
+    expect(d.email.sendConfirmation).not.toHaveBeenCalled();
+    expect(d.emergency.sync).not.toHaveBeenCalled();
   });
 
   it('no confirma si el pago no está aprobado', async () => {
@@ -97,7 +126,7 @@ describe('confirmPayment', () => {
     const d = makeDeps({ verified: verified({ amountCents: 1 }) });
     const result = await confirmPayment(d)('pay-1');
     expect(result).toEqual({ confirmed: false, reason: 'amount-mismatch' });
-    expect(d.storage.updateStatus).not.toHaveBeenCalled();
+    expect(d.storage.compareAndSetStatus).not.toHaveBeenCalled();
   });
 
   it('rechaza si la moneda no coincide', async () => {
@@ -110,7 +139,7 @@ describe('confirmPayment', () => {
     const d = makeDeps({ reg: registration('paid') });
     const result = await confirmPayment(d)('pay-1');
     expect(result).toMatchObject({ confirmed: true, alreadyProcessed: true });
-    expect(d.storage.updateStatus).not.toHaveBeenCalled();
+    expect(d.storage.compareAndSetStatus).not.toHaveBeenCalled();
   });
 
   it('rechaza un estado desde el que no se puede pagar (cancelled)', async () => {
@@ -124,6 +153,6 @@ describe('confirmPayment', () => {
     deps.emergency.sync = vi.fn().mockRejectedValue(new Error('sheets down'));
     const result = await confirmPayment(deps)('pay-1');
     expect(result.confirmed).toBe(true);
-    expect(deps.storage.updateStatus).toHaveBeenCalledWith('reg-1', 'paid');
+    expect(deps.storage.compareAndSetStatus).toHaveBeenCalledWith('reg-1', 'confirmed', 'paid');
   });
 });
