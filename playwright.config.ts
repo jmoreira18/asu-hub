@@ -8,6 +8,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: [['line'], ['allure-playwright']],
+  // `next dev` compila cada ruta en el primer request (puede tardar >5s en frío);
+  // damos margen a las aserciones para no fallar por compilación, no por la app.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -24,5 +27,23 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // E2E hermético: fuerza adapters en memoria sin importar el `.env.local` del
+    // dev (que puede tener credenciales reales de prueba). Vacío = grupo ausente
+    // (pickGroup) → memoria. Así el flujo de pago usa el checkout simulado y no MP
+    // real. NEXT_PUBLIC_PAYMENT_ENABLED activa el botón de pago (se inlinea al
+    // arrancar). Estas vars en process.env tienen prioridad sobre `.env.local`.
+    env: {
+      NEXT_PUBLIC_PAYMENT_ENABLED: 'true',
+      MP_ACCESS_TOKEN: '',
+      MP_WEBHOOK_SECRET: '',
+      MP_NOTIFICATION_URL: '',
+      MP_RETURN_URL: '',
+      SUPABASE_URL: '',
+      SUPABASE_SERVICE_KEY: '',
+      RESEND_API_KEY: '',
+      RESEND_FROM: '',
+      SHEETS_WEBHOOK_URL: '',
+      SHEETS_WEBHOOK_SECRET: '',
+    },
   },
 });

@@ -14,6 +14,9 @@ const emptyAttendee = (): Attendee => ({
 });
 
 const WAIVER_URL = process.env.NEXT_PUBLIC_WAIVER_URL ?? '#';
+// ponytail: flag gates the pay step (decisión de producto de ASU: ¿listo para
+// cobrar?). Off = Fase 1 sin pago. On = botón "Pagar ahora" en la confirmación.
+const PAYMENT_ENABLED = process.env.NEXT_PUBLIC_PAYMENT_ENABLED === 'true';
 
 export function RegistrationForm() {
   const [buyerName, setBuyerName] = useState('');
@@ -23,6 +26,8 @@ export function RegistrationForm() {
   const [error, setError] = useState<string | null>(null);
   const [confirmationId, setConfirmationId] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   const setQuantity = (n: number) => {
     const next = Math.min(MAX_ATTENDEES, Math.max(1, n || 1));
@@ -69,6 +74,31 @@ export function RegistrationForm() {
     }
   };
 
+  const onPay = async () => {
+    if (!confirmationId) return;
+    setPaying(true);
+    setPayError(null);
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: confirmationId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        setPayError(data.error ?? 'No se pudo iniciar el pago.');
+        setPaying(false);
+        return;
+      }
+      // Redirige al checkout del proveedor. La confirmación llega por webhook,
+      // no por el retorno del navegador.
+      window.location.href = data.checkoutUrl;
+    } catch {
+      setPayError('No se pudo conectar. Intentá de nuevo.');
+      setPaying(false);
+    }
+  };
+
   if (status === 'done') {
     return (
       <div className="success" role="status">
@@ -80,6 +110,19 @@ export function RegistrationForm() {
           <p>Te enviamos un email de confirmación.</p>
         ) : (
           <p>Guardá este código: no pudimos enviarte el email de confirmación.</p>
+        )}
+        {PAYMENT_ENABLED && (
+          <>
+            <p>Para completar tu inscripción, realizá el pago:</p>
+            {payError && (
+              <p className="error" role="alert">
+                {payError}
+              </p>
+            )}
+            <button type="button" onClick={onPay} disabled={paying}>
+              {paying ? 'Redirigiendo…' : 'Pagar ahora'}
+            </button>
+          </>
         )}
       </div>
     );

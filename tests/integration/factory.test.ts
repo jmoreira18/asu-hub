@@ -59,6 +59,7 @@ describe('buildPaymentDeps', () => {
       MP_ACCESS_TOKEN: 'tok',
       MP_WEBHOOK_SECRET: 'shh',
       MP_NOTIFICATION_URL: 'https://x/api/payments/webhook',
+      MP_RETURN_URL: 'https://x/pago/retorno',
     } as unknown as NodeJS.ProcessEnv);
     expect(deps.payment).toBeInstanceOf(MercadoPagoPayment);
   });
@@ -87,6 +88,28 @@ describe('buildPaymentDeps', () => {
         MP_NOTIFICATION_URL: 'http://x/api/payments/webhook',
       } as unknown as NodeJS.ProcessEnv),
     ).toThrow(/https/);
+  });
+
+  it('lanza si falta la URL de retorno (el pagador quedaría varado en MP)', () => {
+    expect(() =>
+      buildPaymentDeps({
+        MP_ACCESS_TOKEN: 'tok',
+        MP_WEBHOOK_SECRET: 'shh',
+        MP_NOTIFICATION_URL: 'https://x/api/payments/webhook',
+      } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/MP_RETURN_URL/);
+  });
+
+  it('lanza si MP_RETURN_URL no es https', () => {
+    expect(() =>
+      buildPaymentDeps({
+        MP_ACCESS_TOKEN: 'tok',
+        MP_WEBHOOK_SECRET: 'shh',
+        MP_NOTIFICATION_URL: 'https://x/api/payments/webhook',
+        // eslint-disable-next-line sonarjs/no-clear-text-protocols -- probamos justo que el http se rechaza
+        MP_RETURN_URL: 'http://x/pago/retorno',
+      } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/MP_RETURN_URL/);
   });
 
   it('carga PRICING_CONFIG desde la env cuando está definida', () => {
