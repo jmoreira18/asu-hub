@@ -78,6 +78,17 @@ describe('buildPaymentDeps', () => {
     ).toThrow(/MP_NOTIFICATION_URL/);
   });
 
+  it('lanza si MP_NOTIFICATION_URL no es https (MP descarta el no-HTTPS en silencio)', () => {
+    expect(() =>
+      buildPaymentDeps({
+        MP_ACCESS_TOKEN: 'tok',
+        MP_WEBHOOK_SECRET: 'shh',
+        // eslint-disable-next-line sonarjs/no-clear-text-protocols -- probamos justo que el http se rechaza
+        MP_NOTIFICATION_URL: 'http://x/api/payments/webhook',
+      } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/https/);
+  });
+
   it('carga PRICING_CONFIG desde la env cuando está definida', () => {
     const deps = buildPaymentDeps({
       PRICING_CONFIG: JSON.stringify({

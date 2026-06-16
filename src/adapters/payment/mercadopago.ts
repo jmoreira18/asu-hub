@@ -85,8 +85,8 @@ export class MercadoPagoPayment implements PaymentProvider {
         // Vuelve en el webhook como external_reference: mapea pago -> registro.
         external_reference: req.registrationId,
         payer: { email: req.payerEmail },
-        // MP notifica a esta URL al cambiar el estado del pago. Se omite si no
-        // está configurada (cae al webhook del panel).
+        // MP notifica a esta URL al cambiar el estado del pago. En prod el
+        // factory siempre la setea; opcional acá solo para tests/dev.
         ...(this.config.notificationUrl ? { notification_url: this.config.notificationUrl } : {}),
       }),
     });

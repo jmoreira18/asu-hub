@@ -106,6 +106,12 @@ export function buildPaymentDeps(env: NodeJS.ProcessEnv = process.env): PaymentD
   const base = buildDeps(env);
   const allowDev = env.NODE_ENV !== 'production';
 
+  // MP descarta silenciosamente un notification_url no-HTTPS → no llega la
+  // confirmación. Validamos el formato acá: presencia sola (pickGroup) no basta.
+  if (env.MP_NOTIFICATION_URL && !env.MP_NOTIFICATION_URL.startsWith('https://')) {
+    throw new Error('MP_NOTIFICATION_URL debe ser una URL https:// completa.');
+  }
+
   const payment = pickGroup<PaymentProvider>(
     'pago (Mercado Pago)',
     {
