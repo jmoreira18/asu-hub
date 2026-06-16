@@ -49,7 +49,11 @@ describe('computePrice', () => {
   });
 
   it('trata un asistente sin categoría como no-socio', () => {
-    const quote = computePrice({ attendees: [attendee()] }, config, new Date('2026-02-01T00:00:00Z'));
+    const quote = computePrice(
+      { attendees: [attendee()] },
+      config,
+      new Date('2026-02-01T00:00:00Z'),
+    );
     expect(quote.breakdown['no-socio'].count).toBe(1);
     expect(quote.breakdown.socio.count).toBe(0);
     expect(quote.amountCents).toBe(30000);

@@ -74,7 +74,10 @@ export function computePrice(
   const tier = activeTier(config, now);
 
   const breakdown = Object.fromEntries(
-    PRICE_CATEGORIES.map((cat) => [cat, { count: 0, unitCents: tier.prices[cat], subtotalCents: 0 }]),
+    PRICE_CATEGORIES.map((cat) => [
+      cat,
+      { count: 0, unitCents: tier.prices[cat], subtotalCents: 0 },
+    ]),
   ) as PriceBreakdown;
 
   for (const attendee of registration.attendees) {

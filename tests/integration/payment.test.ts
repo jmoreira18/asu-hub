@@ -96,16 +96,14 @@ describe('MercadoPagoPayment', () => {
 
   it('verifyPayment mapea rejected/cancelled y otros a pending', async () => {
     const status = async (mp: string) => {
-      const fetchImpl = vi
-        .fn()
-        .mockResolvedValue(
-          jsonResponse({
-            status: mp,
-            external_reference: 'r',
-            transaction_amount: 1,
-            currency_id: 'UYU',
-          }),
-        );
+      const fetchImpl = vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: mp,
+          external_reference: 'r',
+          transaction_amount: 1,
+          currency_id: 'UYU',
+        }),
+      );
       return (await make(fetchImpl).verifyPayment('p')).status;
     };
     expect(await status('rejected')).toBe('rejected');

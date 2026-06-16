@@ -52,7 +52,9 @@ describe('MemoryStorage', () => {
   });
 
   it('compareAndSetStatus lanza si no existe', async () => {
-    await expect(new MemoryStorage().compareAndSetStatus('x', 'confirmed', 'paid')).rejects.toThrow();
+    await expect(
+      new MemoryStorage().compareAndSetStatus('x', 'confirmed', 'paid'),
+    ).rejects.toThrow();
   });
 
   it('setPaymentQuote persiste el monto bloqueado', async () => {

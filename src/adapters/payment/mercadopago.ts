@@ -131,9 +131,7 @@ export class MercadoPagoPayment implements PaymentProvider {
     if (requestId) manifest += `request-id:${requestId};`;
     manifest += `ts:${ts};`;
 
-    const expected = createHmac('sha256', this.config.webhookSecret)
-      .update(manifest)
-      .digest('hex');
+    const expected = createHmac('sha256', this.config.webhookSecret).update(manifest).digest('hex');
 
     const a = Buffer.from(expected, 'hex');
     const b = Buffer.from(v1, 'hex');

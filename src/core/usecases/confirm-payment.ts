@@ -68,7 +68,8 @@ export function confirmPayment(deps: ConfirmPaymentDeps) {
     // reloj del webhook). Fallback al cálculo actual solo si no hay monto
     // bloqueado (registración pre-Fase 2 o flujo sin startPayment).
     const expectedCents =
-      registration.lockedAmountCents ?? computePrice(registration, deps.pricing, clock()).amountCents;
+      registration.lockedAmountCents ??
+      computePrice(registration, deps.pricing, clock()).amountCents;
     const expectedCurrency = registration.lockedCurrency ?? deps.pricing.currency;
     if (expectedCents !== verified.amountCents || expectedCurrency !== verified.currency) {
       // El monto pagado no coincide con el bloqueado: posible manipulación. No
@@ -84,7 +85,11 @@ export function confirmPayment(deps: ConfirmPaymentDeps) {
     const next = transition(registration.status, 'pay');
     // Transición atómica: si otra reentrega en paralelo ya ganó, no aplicamos ni
     // reenviamos email/sync (éxito no-op idempotente).
-    const applied = await deps.storage.compareAndSetStatus(registration.id, registration.status, next);
+    const applied = await deps.storage.compareAndSetStatus(
+      registration.id,
+      registration.status,
+      next,
+    );
     if (!applied) {
       return {
         confirmed: true,

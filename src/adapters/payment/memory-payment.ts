@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  PaymentProvider,
-  CreatePaymentRequest,
-  VerifiedPayment,
-} from '@core/ports/payment';
+import type { PaymentProvider, CreatePaymentRequest, VerifiedPayment } from '@core/ports/payment';
 
 /**
  * Proveedor de pago de desarrollo. Simula la aprobación inmediata sin tocar

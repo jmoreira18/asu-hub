@@ -34,9 +34,7 @@ export function startPayment(deps: StartPaymentDeps) {
       throw new Error(`Registración no encontrada: ${registrationId}`);
     }
     if (!canTransition(registration.status, 'pay')) {
-      throw new Error(
-        `No se puede iniciar el pago desde el estado "${registration.status}"`,
-      );
+      throw new Error(`No se puede iniciar el pago desde el estado "${registration.status}"`);
     }
 
     const quote = computePrice(registration, deps.pricing, clock());
