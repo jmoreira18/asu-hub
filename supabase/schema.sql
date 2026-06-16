@@ -9,7 +9,8 @@ create table if not exists public.registrations (
   buyer_email         text        not null,
   quantity            int         not null,
   attendees           jsonb       not null,
-  status              text        not null default 'draft',
+  status              text        not null default 'draft'
+    check (status in ('draft', 'confirmed', 'paid', 'cancelled')),
   created_at          timestamptz not null default now(),
   -- Fase 2 (pago): monto bloqueado al iniciar startPayment. Nullables.
   locked_amount_cents int,
@@ -23,4 +24,5 @@ alter table public.registrations enable row level security;
 
 -- El service_role (server-side, bypassa RLS) necesita privilegios explicitos
 -- sobre la tabla. Sin esto PostgREST devuelve 403 "permission denied".
-grant select, insert, update, delete on public.registrations to service_role;
+-- Minimo privilegio: StoragePort no borra filas, asi que no se otorga delete.
+grant select, insert, update on public.registrations to service_role;
