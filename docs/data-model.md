@@ -46,6 +46,16 @@ opción futura si se necesitan queries por asistente.
 | `attendees` | jsonb |
 | `status` | text |
 | `created_at` | timestamptz |
+| `locked_amount_cents` | int (nullable) |
+| `locked_currency` | text (nullable) |
+
+> **Fase 2 (pago).** `locked_amount_cents` / `locked_currency` guardan el monto
+> **bloqueado al iniciar el pago** (`startPayment`). `confirmPayment` compara lo
+> realmente pagado contra ese monto bloqueado, no contra un recálculo con el
+> reloj del webhook (evita falsos rechazos si cambia la tanda). Son nullables:
+> solo se setean una vez que el pago se inicia. **Requiere migración** antes de
+> conectar Supabase real (`ALTER TABLE ... ADD COLUMN locked_amount_cents int,
+> ADD COLUMN locked_currency text`).
 
 ## Reglas de validación clave
 

@@ -11,4 +11,20 @@ export interface StoragePort {
   findById(id: string): Promise<Registration | null>;
   /** Actualiza el estado de una registración existente (Fase 2: pago). */
   updateStatus(id: string, status: RegistrationStatus): Promise<void>;
+  /**
+   * Transición de estado **atómica**: pasa de `expected` a `next` solo si el
+   * estado actual es `expected`. Devuelve `true` si se aplicó, `false` si no
+   * (otro proceso ya lo cambió). Base de la idempotencia del webhook de pago sin
+   * condición de carrera: dos reentregas en paralelo, solo una gana.
+   */
+  compareAndSetStatus(
+    id: string,
+    expected: RegistrationStatus,
+    next: RegistrationStatus,
+  ): Promise<boolean>;
+  /**
+   * Persiste el monto bloqueado del pago (Fase 2). Lo escribe `startPayment` con
+   * la cotización vigente al iniciar; `confirmPayment` compara contra él.
+   */
+  setPaymentQuote(id: string, amountCents: number, currency: string): Promise<void>;
 }

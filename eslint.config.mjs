@@ -113,6 +113,8 @@ const eslintConfig = [
     rules: {
       'sonarjs/no-duplicate-string': 'off',
       'no-secrets/no-secrets': 'off',
+      // Secretos ficticios en specs (firmas HMAC de prueba); no son credenciales reales.
+      'sonarjs/hardcoded-secret-signatures': 'off',
     },
   },
 ];

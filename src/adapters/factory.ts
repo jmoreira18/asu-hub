@@ -2,12 +2,17 @@ import type { RegisterAttendeesDeps } from '@core/usecases/register-attendees';
 import type { StoragePort } from '@core/ports/storage';
 import type { EmailPort } from '@core/ports/email';
 import type { EmergencyExportPort } from '@core/ports/emergency-export';
+import type { PaymentProvider } from '@core/ports/payment';
+import type { PricingConfig } from '@core/domain/pricing';
 import { MemoryStorage } from './storage/memory-storage';
 import { SupabaseStorage } from './storage/supabase-storage';
 import { ConsoleEmail } from './email/console-email';
 import { ResendEmail } from './email/resend-email';
 import { MemoryEmergencyExport } from './emergency/memory-export';
 import { GoogleSheetsExport } from './emergency/google-sheets-export';
+import { MemoryPaymentProvider } from './payment/memory-payment';
+import { MercadoPagoPayment } from './payment/mercadopago';
+import { loadPricingConfig } from './payment/default-pricing';
 
 /**
  * Selecciona entre adapter real (todas las vars presentes) o de desarrollo
@@ -83,4 +88,37 @@ export function buildDeps(env: NodeJS.ProcessEnv = process.env): RegisterAttende
   );
 
   return { storage, email, emergency };
+}
+
+/** Dependencias de los casos de uso de pago (Fase 2). */
+export interface PaymentDeps extends RegisterAttendeesDeps {
+  payment: PaymentProvider;
+  pricing: PricingConfig;
+}
+
+/**
+ * Construye las dependencias de pago: reusa storage/email/emergencia de
+ * {@link buildDeps} y agrega el proveedor de pago + la config de precios.
+ * Sin credenciales de MP cae en {@link MemoryPaymentProvider} (dev).
+ * `MP_ACCESS_TOKEN` es secreto de servidor: solo se lee acá, nunca al cliente.
+ */
+export function buildPaymentDeps(env: NodeJS.ProcessEnv = process.env): PaymentDeps {
+  const base = buildDeps(env);
+  const allowDev = env.NODE_ENV !== 'production';
+
+  const payment = pickGroup<PaymentProvider>(
+    'pago (Mercado Pago)',
+    { MP_ACCESS_TOKEN: env.MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET: env.MP_WEBHOOK_SECRET },
+    () =>
+      new MercadoPagoPayment({
+        accessToken: env.MP_ACCESS_TOKEN!,
+        webhookSecret: env.MP_WEBHOOK_SECRET!,
+      }),
+    () => new MemoryPaymentProvider(),
+    allowDev,
+  );
+
+  const pricing = loadPricingConfig(env.PRICING_CONFIG);
+
+  return { ...base, payment, pricing };
 }

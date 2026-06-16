@@ -29,4 +29,24 @@ export class MemoryStorage implements StoragePort {
     if (!row) throw new Error(`Registración no encontrada: ${id}`);
     this.rows.set(id, { ...row, status });
   }
+
+  async compareAndSetStatus(
+    id: string,
+    expected: RegistrationStatus,
+    next: RegistrationStatus,
+  ): Promise<boolean> {
+    const row = this.rows.get(id);
+    if (!row) throw new Error(`Registración no encontrada: ${id}`);
+    // JS es single-threaded: este read-check-write no se intercala. La fuente de
+    // verdad (Supabase) lo hace atómico con un UPDATE ... WHERE status=expected.
+    if (row.status !== expected) return false;
+    this.rows.set(id, { ...row, status: next });
+    return true;
+  }
+
+  async setPaymentQuote(id: string, amountCents: number, currency: string): Promise<void> {
+    const row = this.rows.get(id);
+    if (!row) throw new Error(`Registración no encontrada: ${id}`);
+    this.rows.set(id, { ...row, lockedAmountCents: amountCents, lockedCurrency: currency });
+  }
 }

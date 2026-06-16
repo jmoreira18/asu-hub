@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { buildDeps } from '@adapters/factory';
+import { buildDeps, buildPaymentDeps } from '@adapters/factory';
 import { MemoryStorage } from '@adapters/storage/memory-storage';
 import { SupabaseStorage } from '@adapters/storage/supabase-storage';
 import { ConsoleEmail } from '@adapters/email/console-email';
 import { ResendEmail } from '@adapters/email/resend-email';
 import { MemoryEmergencyExport } from '@adapters/emergency/memory-export';
 import { GoogleSheetsExport } from '@adapters/emergency/google-sheets-export';
+import { MemoryPaymentProvider } from '@adapters/payment/memory-payment';
+import { MercadoPagoPayment } from '@adapters/payment/mercadopago';
+import { DEV_PRICING } from '@adapters/payment/default-pricing';
 
 describe('buildDeps', () => {
   it('cae en adapters de dev sin credenciales', () => {
@@ -39,5 +42,41 @@ describe('buildDeps', () => {
     expect(() => buildDeps({ NODE_ENV: 'production' } as unknown as NodeJS.ProcessEnv)).toThrow(
       /producción/,
     );
+  });
+});
+
+describe('buildPaymentDeps', () => {
+  it('sin credenciales cae en proveedor de pago dev y pricing de dev', () => {
+    const deps = buildPaymentDeps({} as NodeJS.ProcessEnv);
+    expect(deps.payment).toBeInstanceOf(MemoryPaymentProvider);
+    expect(deps.pricing).toBe(DEV_PRICING);
+    // Reusa los adapters base.
+    expect(deps.storage).toBeInstanceOf(MemoryStorage);
+  });
+
+  it('usa Mercado Pago cuando hay credenciales', () => {
+    const deps = buildPaymentDeps({
+      MP_ACCESS_TOKEN: 'tok',
+      MP_WEBHOOK_SECRET: 'shh',
+    } as unknown as NodeJS.ProcessEnv);
+    expect(deps.payment).toBeInstanceOf(MercadoPagoPayment);
+  });
+
+  it('lanza si la config de pago está a medias', () => {
+    expect(() =>
+      buildPaymentDeps({ MP_ACCESS_TOKEN: 'tok' } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/MP_WEBHOOK_SECRET/);
+  });
+
+  it('carga PRICING_CONFIG desde la env cuando está definida', () => {
+    const deps = buildPaymentDeps({
+      PRICING_CONFIG: JSON.stringify({
+        currency: 'USD',
+        tiers: [
+          { id: 't', from: '2026-01-01', to: '2026-12-31', prices: { socio: 1, 'no-socio': 2 } },
+        ],
+      }),
+    } as unknown as NodeJS.ProcessEnv);
+    expect(deps.pricing.currency).toBe('USD');
   });
 });
