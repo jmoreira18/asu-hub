@@ -51,3 +51,21 @@ Tras `rm -rf node_modules package-lock.json && npm install`:
 - El lint global (`eslint .`) falla por artefactos `.next` dentro de un worktree
   suelto en `.claude/` (no versionado). El código fuente (`src`, `tests`) lintea
   limpio. No relacionado con este bump.
+
+## Fix: E2E en CI (resuelve el pendiente de 0003)
+
+0003 dejó abierto si CI debía proveer credenciales completas o usar dev. El
+`playwright.config.ts` levantaba `npm run build && npm run start` (producción),
+donde el factory lanza sin adapters configurados (`allowDev=false`). En
+`release.yml` no hay secrets → `/api/register` devolvía **500**, así que los
+tests negativos/maliciosos (que esperan 400/201) fallaban en CI; solo pasaba el
+caso de JSON malformado (400 antes de tocar el factory).
+
+Resuelto **sin secrets**: los E2E prueban validación de servidor (zod en
+`src/core`), no servicios reales, así que no tiene sentido escribir en Supabase
+real ni mandar emails de Resend en cada release.
+
+- `playwright.config.ts`: `webServer` ahora corre `npm run dev` → en desarrollo
+  el factory permite adapters en memoria/consola. 12/12 E2E en verde.
+- Como `next build` solo se ejecutaba dentro del `webServer` de E2E, se agregó
+  `npm run build` a `pr.yml` para no perder la verificación de build en CI.
