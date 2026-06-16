@@ -44,7 +44,9 @@ const verified = (over: Partial<VerifiedPayment> = {}): VerifiedPayment => ({
   ...over,
 });
 
-function makeDeps(over: { reg?: Registration | null; verified?: VerifiedPayment } = {}): ConfirmPaymentDeps {
+function makeDeps(
+  over: { reg?: Registration | null; verified?: VerifiedPayment } = {},
+): ConfirmPaymentDeps {
   return {
     storage: {
       save: vi.fn(),
@@ -62,7 +64,7 @@ function makeDeps(over: { reg?: Registration | null; verified?: VerifiedPayment 
     emergency: { sync: vi.fn().mockResolvedValue(undefined) },
     email: { sendConfirmation: vi.fn().mockResolvedValue(undefined) },
     pricing: PRICING,
-    // Sin clock inyectado: usa el reloj real. La tanda cubre todo 2026, así el
+    // Sin clock inyectado: usa el reloj real. La tanda cubre el año 2026 entero, así el
     // cálculo es estable y se ejercita el default del reloj.
   };
 }

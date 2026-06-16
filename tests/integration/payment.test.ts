@@ -52,8 +52,11 @@ describe('MemoryPaymentProvider (dev)', () => {
 
 describe('MercadoPagoPayment', () => {
   const baseUrl = 'https://api.test';
+  // Secretos ficticios solo para los tests (no son credenciales reales).
+  const webhookSecret = 'shh';
+  const wrongSecret = 'otro';
   const make = (fetchImpl: typeof fetch) =>
-    new MercadoPagoPayment({ accessToken: 'tok', webhookSecret: 'shh', fetchImpl, baseUrl });
+    new MercadoPagoPayment({ accessToken: 'tok', webhookSecret, fetchImpl, baseUrl });
 
   it('createPayment crea preferencia con external_reference y monto en pesos', async () => {
     const fetchImpl = vi
@@ -95,7 +98,14 @@ describe('MercadoPagoPayment', () => {
     const status = async (mp: string) => {
       const fetchImpl = vi
         .fn()
-        .mockResolvedValue(jsonResponse({ status: mp, external_reference: 'r', transaction_amount: 1, currency_id: 'UYU' }));
+        .mockResolvedValue(
+          jsonResponse({
+            status: mp,
+            external_reference: 'r',
+            transaction_amount: 1,
+            currency_id: 'UYU',
+          }),
+        );
       return (await make(fetchImpl).verifyPayment('p')).status;
     };
     expect(await status('rejected')).toBe('rejected');
@@ -124,13 +134,11 @@ describe('MercadoPagoPayment', () => {
     const dataId = '123';
     const requestId = 'req-9';
     const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
-    const v1 = createHmac('sha256', 'shh').update(manifest).digest('hex');
+    const v1 = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
 
-    expect(
-      p.verifyWebhook({ signature: `ts=${ts},v1=${v1}`, requestId, dataId }),
-    ).toBe(true);
+    expect(p.verifyWebhook({ signature: `ts=${ts},v1=${v1}`, requestId, dataId })).toBe(true);
     // Firma con secreto equivocado.
-    const bad = createHmac('sha256', 'otro').update(manifest).digest('hex');
+    const bad = createHmac('sha256', wrongSecret).update(manifest).digest('hex');
     expect(p.verifyWebhook({ signature: `ts=${ts},v1=${bad}`, requestId, dataId })).toBe(false);
   });
 
@@ -148,7 +156,7 @@ describe('MercadoPagoPayment', () => {
     const ts = '1700000000';
     const dataId = '123';
     const manifest = `id:${dataId};ts:${ts};`;
-    const v1 = createHmac('sha256', 'shh').update(manifest).digest('hex');
+    const v1 = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
     expect(p.verifyWebhook({ signature: `ts=${ts},v1=${v1}`, requestId: null, dataId })).toBe(true);
   });
 });

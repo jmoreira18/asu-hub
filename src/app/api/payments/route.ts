@@ -5,7 +5,8 @@ import { buildPaymentDeps } from '@adapters/factory';
 // Adapters perezosos (ver /api/register).
 let handle: ReturnType<typeof startPayment> | null = null;
 function getHandle() {
-  return (handle ??= startPayment(buildPaymentDeps()));
+  handle ??= startPayment(buildPaymentDeps());
+  return handle;
 }
 
 /**
@@ -32,7 +33,11 @@ export async function POST(request: Request) {
   try {
     const result = await getHandle()(registrationId);
     return NextResponse.json(
-      { checkoutUrl: result.checkoutUrl, amountCents: result.amountCents, currency: result.currency },
+      {
+        checkoutUrl: result.checkoutUrl,
+        amountCents: result.amountCents,
+        currency: result.currency,
+      },
       { status: 200 },
     );
   } catch {

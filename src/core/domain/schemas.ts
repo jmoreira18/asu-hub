@@ -10,7 +10,9 @@ function issuesByPath(error: z.ZodError): Record<string, string[]> {
   const issues: Record<string, string[]> = {};
   for (const issue of error.issues) {
     const key = issue.path.join('.') || '_';
-    (issues[key] ??= []).push(issue.message);
+    const messages = issues[key] ?? [];
+    messages.push(issue.message);
+    issues[key] = messages;
   }
   return issues;
 }
@@ -35,7 +37,7 @@ export const attendeeSchema = z.object({
   // `category` (socio/no-socio) NO se acepta del cliente: define el precio, así
   // que dejarlo client-settable permitiría a un no-socio pagar como socio. Lo
   // asigna el servidor (form admin / lista de socios — decisión de producto
-  // abierta). Hasta entonces `computePrice` trata todo como `no-socio`.
+  // abierta). Hasta entonces `computePrice` trata cada caso como `no-socio`.
 });
 
 export const registrationInputSchema = z.object({

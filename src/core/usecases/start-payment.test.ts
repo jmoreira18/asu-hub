@@ -52,7 +52,7 @@ function makeDeps(reg: Registration | null = registration()): StartPaymentDeps {
       verifyWebhook: vi.fn(),
     },
     pricing: PRICING,
-    // Sin clock: usa el reloj real; la tanda cubre todo 2026.
+    // Sin clock: usa el reloj real; la tanda cubre el año 2026 entero.
   };
 }
 
