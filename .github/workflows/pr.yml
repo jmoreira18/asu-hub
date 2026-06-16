@@ -30,6 +30,9 @@ jobs:
       - run: npm run knip
       # Vitest corre unit + integration y aplica el gate de 100% sobre src/core.
       - run: npm run test:cov
+      # `next build`: única verificación de build en CI (E2E corre contra
+      # `next dev`, no contra el build de producción).
+      - run: npm run build
 
   secrets:
     runs-on: ubuntu-latest
