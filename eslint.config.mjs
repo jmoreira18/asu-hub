@@ -15,6 +15,9 @@ const eslintConfig = [
   {
     ignores: [
       '.next/**',
+      // Tooling de Claude + git worktrees: cada worktree trae su propio build
+      // (.next/coverage/generados) y dispara miles de falsos positivos en `eslint .`.
+      '.claude/**',
       'node_modules/**',
       'coverage/**',
       'allure-report/**',

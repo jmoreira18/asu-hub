@@ -27,8 +27,13 @@ export class MemoryPaymentProvider implements PaymentProvider {
     this.logger.info(
       `[pago dev] creado ${paymentId} para registro ${req.registrationId} (${req.amountCents} ${req.currency})`,
     );
-    // En dev no hay checkout real: la URL apunta al webhook simulado.
-    return { paymentId, checkoutUrl: `/api/payments/dev-checkout?paymentId=${paymentId}` };
+    // En dev no hay checkout real: la URL apunta al simulador (dev-checkout),
+    // que dispara el webhook y redirige al retorno con `external_reference`
+    // (= registrationId), igual que back_urls de MP.
+    return {
+      paymentId,
+      checkoutUrl: `/api/payments/dev-checkout?paymentId=${paymentId}&registrationId=${encodeURIComponent(req.registrationId)}`,
+    };
   }
 
   async verifyPayment(paymentId: string): Promise<VerifiedPayment> {

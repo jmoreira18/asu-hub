@@ -22,6 +22,13 @@ export interface MercadoPagoConfig {
    * webhook configurado en el panel.
    */
   notificationUrl?: string;
+  /**
+   * URL pública COMPLETA de retorno (`https://.../pago/retorno`). Si se define,
+   * se manda como `back_urls` + `auto_return` en la preferencia: tras pagar, MP
+   * redirige al usuario a esta URL con `?status=&external_reference=<regId>`. Es
+   * solo UX de retorno; la confirmación real sigue llegando por webhook.
+   */
+  returnUrl?: string;
   fetchImpl?: FetchLike;
   /** Base de la API. Default producción; en tests se inyecta. */
   baseUrl?: string;
@@ -88,6 +95,18 @@ export class MercadoPagoPayment implements PaymentProvider {
         // MP notifica a esta URL al cambiar el estado del pago. En prod el
         // factory siempre la setea; opcional acá solo para tests/dev.
         ...(this.config.notificationUrl ? { notification_url: this.config.notificationUrl } : {}),
+        // Retorno del navegador tras pagar. `auto_return` redirige solo en
+        // aprobado. UX únicamente; la confirmación real es por webhook.
+        ...(this.config.returnUrl
+          ? {
+              back_urls: {
+                success: this.config.returnUrl,
+                pending: this.config.returnUrl,
+                failure: this.config.returnUrl,
+              },
+              auto_return: 'approved',
+            }
+          : {}),
       }),
     });
     if (!res.ok) throw new Error(`MercadoPago createPayment falló: ${res.status}`);
@@ -125,6 +144,11 @@ export class MercadoPagoPayment implements PaymentProvider {
    * Valida `x-signature` de MP. Formato: `ts=<n>,v1=<hash>`. El manifest firmado
    * es `id:<dataId>;request-id:<requestId>;ts:<ts>;` (campos presentes), HMAC
    * SHA-256 con el secreto. Comparación en tiempo constante.
+   *
+   * No se valida la antigüedad del `ts`: reenviar un webhook válido es inofensivo
+   * porque `confirmPayment` es idempotente (`paid` es terminal). Una ventana de
+   * tiempo solo arriesgaría rechazar reentregas legítimas de MP (que reintenta
+   * ante 5xx) sin agregar defensa real.
    */
   verifyWebhook({ signature, requestId, dataId }: WebhookSignatureInput): boolean {
     if (!signature) return false;

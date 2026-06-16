@@ -71,6 +71,31 @@ describe('MercadoPagoPayment', () => {
     expect(sent.items[0].unit_price).toBe(300); // 30000 centavos
     // Sin notificationUrl configurada, no se manda notification_url.
     expect(sent).not.toHaveProperty('notification_url');
+    // Sin returnUrl configurada, no se mandan back_urls/auto_return.
+    expect(sent).not.toHaveProperty('back_urls');
+    expect(sent).not.toHaveProperty('auto_return');
+  });
+
+  it('createPayment manda back_urls y auto_return cuando hay returnUrl', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: 'pref-1', init_point: 'https://mp/checkout' }));
+    const mp = new MercadoPagoPayment({
+      accessToken: 'tok',
+      webhookSecret,
+      fetchImpl,
+      baseUrl,
+      returnUrl: 'https://x/pago/retorno',
+    });
+    await mp.createPayment(req);
+    const [, init] = fetchImpl.mock.calls[0]!;
+    const sent = JSON.parse(init.body);
+    expect(sent.back_urls).toEqual({
+      success: 'https://x/pago/retorno',
+      pending: 'https://x/pago/retorno',
+      failure: 'https://x/pago/retorno',
+    });
+    expect(sent.auto_return).toBe('approved');
   });
 
   it('createPayment manda notification_url cuando está configurada', async () => {
@@ -171,6 +196,18 @@ describe('MercadoPagoPayment', () => {
   it('verifyWebhook arma el manifest sin request-id cuando no viene', () => {
     const p = make(vi.fn());
     const ts = '1700000000';
+    const dataId = '123';
+    const manifest = `id:${dataId};ts:${ts};`;
+    const v1 = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+    expect(p.verifyWebhook({ signature: `ts=${ts},v1=${v1}`, requestId: null, dataId })).toBe(true);
+  });
+
+  it('verifyWebhook acepta una firma vieja (replay): confirmPayment es idempotente', () => {
+    // No hay ventana de tiempo: un `ts` viejo con HMAC correcto sigue siendo
+    // válido. Reenviar un webhook legítimo es inofensivo (paid es terminal) y MP
+    // reintenta ante 5xx con la firma original.
+    const p = make(vi.fn());
+    const ts = '1';
     const dataId = '123';
     const manifest = `id:${dataId};ts:${ts};`;
     const v1 = createHmac('sha256', webhookSecret).update(manifest).digest('hex');

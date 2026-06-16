@@ -14,6 +14,17 @@ import { MemoryPaymentProvider } from './payment/memory-payment';
 import { MercadoPagoPayment } from './payment/mercadopago';
 import { loadPricingConfig } from './payment/default-pricing';
 
+// Adapters de desarrollo: singletons por PROCESO vía globalThis. En dev/E2E cada
+// ruta API (register, payments, webhook, status) se bundlea por separado, así que
+// un `let` a nivel de módulo NO se comparte entre rutas (cada una tiene su propia
+// copia del módulo). Sin compartir, el registro guardado en /register sería
+// invisible para /payments, y el pago para /webhook. globalThis sí es único en el
+// proceso → un solo datastore en memoria. En producción se usan adapters reales.
+const devSingletons = globalThis as typeof globalThis & {
+  __devStorage?: MemoryStorage;
+  __devPayment?: MemoryPaymentProvider;
+};
+
 /**
  * Selecciona entre adapter real (todas las vars presentes) o de desarrollo
  * (ninguna presente). Si el grupo está configurado a medias lanza, en vez de
@@ -60,7 +71,7 @@ export function buildDeps(env: NodeJS.ProcessEnv = process.env): RegisterAttende
     'storage (Supabase)',
     { SUPABASE_URL: env.SUPABASE_URL, SUPABASE_SERVICE_KEY: env.SUPABASE_SERVICE_KEY },
     () => new SupabaseStorage({ url: env.SUPABASE_URL!, serviceKey: env.SUPABASE_SERVICE_KEY! }),
-    () => new MemoryStorage(),
+    () => (devSingletons.__devStorage ??= new MemoryStorage()),
     allowDev,
   );
 
@@ -111,6 +122,10 @@ export function buildPaymentDeps(env: NodeJS.ProcessEnv = process.env): PaymentD
   if (env.MP_NOTIFICATION_URL && !env.MP_NOTIFICATION_URL.startsWith('https://')) {
     throw new Error('MP_NOTIFICATION_URL debe ser una URL https:// completa.');
   }
+  // back_urls de MP exige HTTPS para auto_return; un http es rechazado.
+  if (env.MP_RETURN_URL && !env.MP_RETURN_URL.startsWith('https://')) {
+    throw new Error('MP_RETURN_URL debe ser una URL https:// completa.');
+  }
 
   const payment = pickGroup<PaymentProvider>(
     'pago (Mercado Pago)',
@@ -121,14 +136,17 @@ export function buildPaymentDeps(env: NodeJS.ProcessEnv = process.env): PaymentD
       // confirma el pago, así que un grupo a medias lanza (ver pickGroup) en vez
       // de cobrar sin vía de confirmación.
       MP_NOTIFICATION_URL: env.MP_NOTIFICATION_URL,
+      // Obligatoria también: sin retorno el pagador queda varado en MP tras pagar.
+      MP_RETURN_URL: env.MP_RETURN_URL,
     },
     () =>
       new MercadoPagoPayment({
         accessToken: env.MP_ACCESS_TOKEN!,
         webhookSecret: env.MP_WEBHOOK_SECRET!,
         notificationUrl: env.MP_NOTIFICATION_URL!,
+        returnUrl: env.MP_RETURN_URL!,
       }),
-    () => new MemoryPaymentProvider(),
+    () => (devSingletons.__devPayment ??= new MemoryPaymentProvider()),
     allowDev,
   );
 

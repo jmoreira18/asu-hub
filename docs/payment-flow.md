@@ -77,5 +77,36 @@ Pendiente para cobrar de verdad:
   `live_mode`). Es **obligatoria junto a token + secret**: el factory lanza si
   falta (no se cobra sin vía de confirmación). Dev = URL de ngrok; prod =
   dominio real, host siempre-encendido. Ver `docs/dev-memory/0005`.
+- `MP_RETURN_URL`: **URL pública HTTPS completa** de `/pago/retorno`. El adapter
+  la manda como `back_urls` + `auto_return:'approved'`, así MP redirige al pagador
+  de vuelta tras pagar. **Obligatoria junto al resto del grupo MP** (mismo
+  todo-o-nada + check https que `MP_NOTIFICATION_URL`). Solo UX de retorno; la
+  confirmación sigue siendo por webhook. Ver `docs/dev-memory/0006`.
+- `NEXT_PUBLIC_PAYMENT_ENABLED=true` para mostrar el paso de pago en la UI
+  (decisión de producto: ¿listo para cobrar?).
 - `PRICING_CONFIG` real (tandas + precios por categoría) provista por ASU.
 - **Facturación DGI** con contador (bloqueante no técnico).
+
+## Paso de pago en la UI (Fase 2 — `docs/dev-memory/0006`)
+
+Tras un registro `confirmed`, la UI ofrece **Pagar ahora** → `POST /api/payments`
+(solo `registrationId`; el monto se calcula server-side) → redirige al
+`checkoutUrl`. Al volver, **`/pago/retorno`** lee el estado **real** de la DB vía
+`GET /api/registrations/:id` (solo `status`, sin PII) y muestra paga/pendiente:
+nunca confía en el `?status=` del redirect (regla de oro).
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant W as Web (/pago/retorno)
+    participant API as /api/registrations/:id
+    U->>W: vuelve de MP (back_urls) con external_reference
+    W->>API: GET estado real
+    API-->>W: { status: paid | confirmed }
+    W-->>U: "¡Pago confirmado!" / "en proceso"
+```
+
+**Dev/E2E sin MP real:** `MemoryPaymentProvider` apunta el `checkoutUrl` a
+`GET /api/payments/dev-checkout` (simulador, solo dev): dispara el webhook real
+server-to-server y redirige al retorno con `external_reference`, cerrando el loop
+`register → pay → paid` sin credenciales. E2E: `tests/e2e/payment.spec.ts`.
