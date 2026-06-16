@@ -69,8 +69,13 @@ Pendiente para cobrar de verdad:
 - Credenciales **TEST** de Mercado Pago en `.env.local` / hosting (nunca en git
   ni en el chat). `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` son secretos de
   servidor; nunca `NEXT_PUBLIC_`.
-- Configurar el webhook en el panel de MP apuntando a una **URL pública HTTPS**
-  estable (`/api/payments/webhook`). Un túnel/CDN sobre un server local sirve
-  para sandbox; producción mejor en host siempre-encendido.
+- `MP_NOTIFICATION_URL`: **URL pública HTTPS completa** del webhook
+  (`https://.../api/payments/webhook`). El adapter la manda como
+  `notification_url` en cada preferencia, así MP notifica a esa URL exacta — la
+  vía robusta de confirmación, **independiente del modo del webhook del panel**
+  (en pruebas se vio que el webhook del panel no entregaba por desajuste de
+  `live_mode`). Es **obligatoria junto a token + secret**: el factory lanza si
+  falta (no se cobra sin vía de confirmación). Dev = URL de ngrok; prod =
+  dominio real, host siempre-encendido. Ver `docs/dev-memory/0005`.
 - `PRICING_CONFIG` real (tandas + precios por categoría) provista por ASU.
 - **Facturación DGI** con contador (bloqueante no técnico).

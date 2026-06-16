@@ -15,6 +15,13 @@ export interface MercadoPagoConfig {
   accessToken: string;
   /** Secreto para validar la firma del webhook (`x-signature`). */
   webhookSecret: string;
+  /**
+   * URL pública COMPLETA del webhook (`https://.../api/payments/webhook`). Si se
+   * define, se manda como `notification_url` en la preferencia y MP notifica a
+   * esa URL exacta — la vía robusta de confirmación, independiente del modo del
+   * webhook configurado en el panel.
+   */
+  notificationUrl?: string;
   fetchImpl?: FetchLike;
   /** Base de la API. Default producción; en tests se inyecta. */
   baseUrl?: string;
@@ -78,6 +85,9 @@ export class MercadoPagoPayment implements PaymentProvider {
         // Vuelve en el webhook como external_reference: mapea pago -> registro.
         external_reference: req.registrationId,
         payer: { email: req.payerEmail },
+        // MP notifica a esta URL al cambiar el estado del pago. En prod el
+        // factory siempre la setea; opcional acá solo para tests/dev.
+        ...(this.config.notificationUrl ? { notification_url: this.config.notificationUrl } : {}),
       }),
     });
     if (!res.ok) throw new Error(`MercadoPago createPayment falló: ${res.status}`);

@@ -106,13 +106,27 @@ export function buildPaymentDeps(env: NodeJS.ProcessEnv = process.env): PaymentD
   const base = buildDeps(env);
   const allowDev = env.NODE_ENV !== 'production';
 
+  // MP descarta silenciosamente un notification_url no-HTTPS → no llega la
+  // confirmación. Validamos el formato acá: presencia sola (pickGroup) no basta.
+  if (env.MP_NOTIFICATION_URL && !env.MP_NOTIFICATION_URL.startsWith('https://')) {
+    throw new Error('MP_NOTIFICATION_URL debe ser una URL https:// completa.');
+  }
+
   const payment = pickGroup<PaymentProvider>(
     'pago (Mercado Pago)',
-    { MP_ACCESS_TOKEN: env.MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET: env.MP_WEBHOOK_SECRET },
+    {
+      MP_ACCESS_TOKEN: env.MP_ACCESS_TOKEN,
+      MP_WEBHOOK_SECRET: env.MP_WEBHOOK_SECRET,
+      // Obligatoria junto a las credenciales: sin URL de notificación MP no
+      // confirma el pago, así que un grupo a medias lanza (ver pickGroup) en vez
+      // de cobrar sin vía de confirmación.
+      MP_NOTIFICATION_URL: env.MP_NOTIFICATION_URL,
+    },
     () =>
       new MercadoPagoPayment({
         accessToken: env.MP_ACCESS_TOKEN!,
         webhookSecret: env.MP_WEBHOOK_SECRET!,
+        notificationUrl: env.MP_NOTIFICATION_URL!,
       }),
     () => new MemoryPaymentProvider(),
     allowDev,
