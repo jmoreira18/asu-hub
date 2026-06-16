@@ -69,6 +69,25 @@ describe('MercadoPagoPayment', () => {
     const sent = JSON.parse(init.body);
     expect(sent.external_reference).toBe('reg-1');
     expect(sent.items[0].unit_price).toBe(300); // 30000 centavos
+    // Sin notificationUrl configurada, no se manda notification_url.
+    expect(sent).not.toHaveProperty('notification_url');
+  });
+
+  it('createPayment manda notification_url cuando está configurada', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: 'pref-1', init_point: 'https://mp/checkout' }));
+    const mp = new MercadoPagoPayment({
+      accessToken: 'tok',
+      webhookSecret,
+      fetchImpl,
+      baseUrl,
+      notificationUrl: 'https://x/api/payments/webhook',
+    });
+    await mp.createPayment(req);
+    const [, init] = fetchImpl.mock.calls[0]!;
+    const sent = JSON.parse(init.body);
+    expect(sent.notification_url).toBe('https://x/api/payments/webhook');
   });
 
   it('createPayment lanza si la API falla', async () => {

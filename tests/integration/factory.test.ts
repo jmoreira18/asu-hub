@@ -58,6 +58,7 @@ describe('buildPaymentDeps', () => {
     const deps = buildPaymentDeps({
       MP_ACCESS_TOKEN: 'tok',
       MP_WEBHOOK_SECRET: 'shh',
+      MP_NOTIFICATION_URL: 'https://x/api/payments/webhook',
     } as unknown as NodeJS.ProcessEnv);
     expect(deps.payment).toBeInstanceOf(MercadoPagoPayment);
   });
@@ -66,6 +67,15 @@ describe('buildPaymentDeps', () => {
     expect(() =>
       buildPaymentDeps({ MP_ACCESS_TOKEN: 'tok' } as unknown as NodeJS.ProcessEnv),
     ).toThrow(/MP_WEBHOOK_SECRET/);
+  });
+
+  it('lanza si faltan la URL de notificación (no se cobra sin vía de confirmación)', () => {
+    expect(() =>
+      buildPaymentDeps({
+        MP_ACCESS_TOKEN: 'tok',
+        MP_WEBHOOK_SECRET: 'shh',
+      } as unknown as NodeJS.ProcessEnv),
+    ).toThrow(/MP_NOTIFICATION_URL/);
   });
 
   it('carga PRICING_CONFIG desde la env cuando está definida', () => {
