@@ -13,9 +13,11 @@ export default defineConfig({
   testDir: './tests/e2e-sandbox',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  // MP sandbox (checkout real) es inherentemente flaky; reintentos absorben la
-  // variabilidad de su UI. Es opt-in/manual, así que reintentar no molesta a CI.
-  retries: 2,
+  // El test espera explícitamente (toBeEnabled/visible) en cada paso, así que la
+  // mayor flakiness ya está atajada. Queda 1 reintento como red fina para el
+  // único fallo que ningún wait arregla: MP a veces no renderiza el body del
+  // checkout. Opt-in/manual, no molesta a CI.
+  retries: 1,
   reporter: [['line']],
   // El checkout de MP carga recursos externos; damos margen amplio.
   expect: { timeout: 30_000 },

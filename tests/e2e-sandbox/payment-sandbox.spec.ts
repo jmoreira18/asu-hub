@@ -58,48 +58,53 @@ test('pago real MP sandbox: registro -> checkout MP -> webhook -> paid', async (
   await page.waitForURL(/mercadopago|mercadolibre/, { timeout: 30_000 });
 
   // 3) Checkout de MP con tarjeta de prueba (APRO=aprobado). El DOM de MP cambia
-  // seguido; este bloque es el punto frágil y puede que haya que ajustarlo.
-  // A veces MP muestra una pantalla de métodos (botón tarjeta), a veces va
-  // directo al formulario. Si el botón aparece, click; si no, seguimos.
+  // seguido; este bloque es el punto frágil. MP a veces muestra una pantalla de
+  // método primero y a veces va directo al formulario: esperamos lo que aparezca
+  // (sin esperas ciegas) y, si hay botón de método, lo clickeamos.
+  const cardForm = page.getByText('Completa los datos de tu tarjeta');
   const methodBtn = page
     .getByRole('button', { name: /tarjeta|nueva tarjeta|débito|crédito/i })
     .first();
-  try {
-    await methodBtn.click({ timeout: 4_000 });
-  } catch {
-    // Ya estamos en "Completa los datos de tu tarjeta".
+  await expect(cardForm.or(methodBtn)).toBeVisible({ timeout: 45_000 });
+  if (!(await cardForm.isVisible())) {
+    await methodBtn.click();
+    await cardForm.waitFor({ timeout: 30_000 });
   }
+
   // Número/Vencimiento/CVV viven en iframes seguros de MP (secure-fields), no se
   // cruzan con getByLabel. Se apuntan por id ESTABLE (no por nth(): MP además
   // monta iframes de reCAPTCHA/tracking que desordenan los índices y cuelgan el
-  // test). Se tipean con pressSequentially (keystrokes reales): el CVV no valida
-  // con .fill(). Titular y documento son textboxes del frame principal.
-  // click({force}): el secure-field cross-origin nunca pasa el chequeo de
-  // "stable" de Playwright y el click normal se cuelga sin tipear; force lo
-  // saltea y enfoca el input para pressSequentially.
-  await page.getByText('Completa los datos de tu tarjeta').waitFor({ timeout: 30_000 });
-  const cardNumber = page.frameLocator('#iframe-sf-cardNumber').getByRole('textbox');
-  await cardNumber.click({ force: true });
-  await cardNumber.pressSequentially('5031755734530604');
+  // test). Hay que tipearlos con KEYSTROKES reales (pressSequentially): MP ignora
+  // .fill() (setea .value pero su JS no lo registra -> campo inválido). El
+  // `delay` entre teclas evita que MP dropee/coalese keystrokes (causa de
+  // flakiness: campo a medio llenar -> Continuar disabled). click({force}): el
+  // secure-field cross-origin cuelga el click normal por el chequeo de "stable".
+  // Titular/documento son textboxes del frame principal.
+  const type = async (sel: string, value: string) => {
+    const field = page.frameLocator(sel).getByRole('textbox');
+    await field.click({ force: true });
+    await field.pressSequentially(value, { delay: 50 });
+  };
+  await type('#iframe-sf-cardNumber', '5031755734530604');
   await page.getByRole('textbox', { name: 'Nombre del titular' }).fill('APRO');
-  const expiry = page.frameLocator('#iframe-sf-expirationDate').getByRole('textbox');
-  await expiry.click({ force: true });
-  await expiry.pressSequentially('1130');
-  const cvv = page.frameLocator('#iframe-sf-securityCode').getByRole('textbox');
-  await cvv.click({ force: true });
-  await cvv.pressSequentially('123');
+  await type('#iframe-sf-expirationDate', '1130');
+  await type('#iframe-sf-securityCode', '123');
   // CI uruguaya con dígito verificador VÁLIDO (1234567 -> 2); MP valida el
   // checksum y deja Continuar deshabilitado si no cierra, sin marcar el campo.
   await page.getByRole('textbox', { name: 'Documento del titular' }).fill('12345672');
   // Blur: MP valida el documento al perder foco y recién ahí habilita Continuar.
   await page.keyboard.press('Tab');
 
-  // Continuar -> (cuotas/confirmación) -> pagar. Botón final varía: pagar/confirmar.
-  await page.getByRole('button', { name: 'Continuar' }).click();
-  await page
-    .getByRole('button', { name: /pagar|confirmar/i })
-    .first()
-    .click();
+  // Continuar: esperar a que MP lo habilite (valida la tarjeta/doc async). Click
+  // racing con la validación era la causa #1 de cuelgues -> toBeEnabled explícito.
+  const continuar = page.getByRole('button', { name: 'Continuar' });
+  await expect(continuar).toBeEnabled({ timeout: 20_000 });
+  await continuar.click();
+
+  // Pagar/confirmar (botón final varía): esperar visible+habilitado antes del click.
+  const payBtn = page.getByRole('button', { name: /pagar|confirmar/i }).first();
+  await expect(payBtn).toBeEnabled({ timeout: 30_000 });
+  await payBtn.click();
 
   // 4) auto_return de MP redirige a MP_RETURN_URL (/pago/retorno) con el pago
   // real. Extraemos payment_id + external_reference del redirect.
