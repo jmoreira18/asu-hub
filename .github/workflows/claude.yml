@@ -1,0 +1,39 @@
+name: Claude Code
+
+# Asistente Claude en PRs e issues. Se dispara cuando alguien menciona @claude
+# en un comentario, review o descripción de issue. Requiere el secret
+# ANTHROPIC_API_KEY y la GitHub App de Claude instalada en el repo.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    # Corre solo si (a) el texto menciona @claude y (b) quien lo escribe tiene
+    # permiso en el repo: OWNER (vos) o COLLABORATOR (a quien le des acceso).
+    # Repo es PÚBLICO: sin este gate, cualquier desconocido podría gatillar la
+    # action y gastar tu ANTHROPIC_API_KEY. Un CONTRIBUTOR/NONE NO alcanza.
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && contains(fromJSON('["OWNER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) && contains(fromJSON('["OWNER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@806af32823ef69c8ef357086c573a902af641307 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
