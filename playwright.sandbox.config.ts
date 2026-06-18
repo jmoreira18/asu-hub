@@ -37,7 +37,6 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_PAYMENT_ENABLED: 'true',
-      MP_SANDBOX_E2E: '1',
       MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN ?? '',
       MP_WEBHOOK_SECRET: process.env.MP_WEBHOOK_SECRET ?? '',
       MP_NOTIFICATION_URL: `${tunnel}/api/payments/webhook`,

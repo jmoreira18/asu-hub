@@ -18,7 +18,7 @@ import { test, expect } from '@playwright/test';
 // Frágil a propósito: el DOM del checkout de MP cambia y requiere tarjeta de
 // prueba. Opt-in (gate TUNNEL_URL) y fuera del E2E hermético.
 // Gate en TUNNEL_URL: el operador lo exporta en su shell (presente en el proceso
-// del runner). MP_SANDBOX_E2E vive en webServer.env y solo llega al `next dev`.
+// del runner).
 test.skip(
   !process.env.TUNNEL_URL,
   'E2E de MP sandbox: solo con `npm run test:e2e:sandbox` + TUNNEL_URL (requiere creds + túnel)',
@@ -28,7 +28,10 @@ test('pago real MP sandbox: registro -> checkout MP -> webhook -> paid', async (
   // ngrok free intercala una interstitial salvo que se mande este header. Se
   // inyecta SOLO en requests al túnel (retorno + su fetch a la API): mandarlo a
   // mercadopago.com rompería su checkout (header custom -> preflight CORS).
-  await page.route('**/*ngrok-free.dev/**', async (route) => {
+  // El glob se deriva del host de TUNNEL_URL para no romper si ngrok cambia de
+  // dominio (.ngrok-free.app, .ngrok.io, dominio propio pago, etc.).
+  const tunnelHost = new URL(process.env.TUNNEL_URL!).host;
+  await page.route(`**/*${tunnelHost}/**`, async (route) => {
     await route.continue({
       headers: { ...route.request().headers(), 'ngrok-skip-browser-warning': 'true' },
     });
@@ -123,13 +126,10 @@ test('pago real MP sandbox: registro -> checkout MP -> webhook -> paid', async (
   const v1 = createHmac('sha256', secret)
     .update(`id:${paymentId};request-id:${requestId};ts:${ts};`)
     .digest('hex');
-  const res = await page.request.post(
-    `http://localhost:3000/api/payments/webhook?data.id=${paymentId}&type=payment`,
-    {
-      headers: { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': requestId },
-      data: { data: { id: paymentId }, type: 'payment' },
-    },
-  );
+  const res = await page.request.post(`/api/payments/webhook?data.id=${paymentId}&type=payment`, {
+    headers: { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': requestId },
+    data: { data: { id: paymentId }, type: 'payment' },
+  });
   expect(res.status(), 'webhook firmado debe confirmar (200)').toBe(200);
 
   // 6) El retorno consulta el estado real en la DB: paid solo si confirmPayment
