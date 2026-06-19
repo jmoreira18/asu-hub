@@ -21,17 +21,18 @@ graph LR
 
 ## Cobertura
 
-Gate de **100%** (statements/branches/functions/lines) sobre `src/core/**`
-(la lógica de negocio portable). Configurado en `vitest.config.ts`. Los
-puertos son interfaces puras → excluidos. La UI y los adapters no persiguen
-100% (se cubren con integration + E2E).
+Gate de **100%** (statements/branches/functions/lines) sobre toda la lógica
+testeable en unit/integration: **`src/core` + `src/adapters` + rutas API
+(`src/app/api/**/*.ts`)**. Configurado en `vitest.config.ts`. Excluidos: los
+puertos (interfaces puras), la **UI (`.tsx`)** —vitest no la mide sin setup JSX,
+la cubre el E2E— y `dev-checkout` (tooling solo de dev, en prod da 404).
 
 ## Comandos
 
 ```bash
 npm test            # unit + integration (una vez)
 npm run test:watch  # modo watch
-npm run test:cov    # con cobertura + gate 100% core
+npm run test:cov    # con cobertura + gate 100% (core + adapters + rutas API)
 npm run test:e2e    # Playwright (necesita navegadores instalados)
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint

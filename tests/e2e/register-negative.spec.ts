@@ -78,6 +78,51 @@ test.describe('registro — casos negativos (validacion de servidor)', () => {
     // Clave literal con puntos: el array evita que toHaveProperty la lea como ruta anidada.
     expect((await res.json()).issues).toHaveProperty(['attendees.0.experience']);
   });
+
+  test('buyerName vacio se rechaza', async ({ request }) => {
+    const res = await post(request, { ...validBody(), buyerName: '' });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).issues).toHaveProperty('buyerName');
+  });
+
+  test('documento vacio se rechaza', async ({ request }) => {
+    const res = await post(request, {
+      ...validBody(),
+      attendees: [{ ...validAttendee(), documentNumber: '' }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).issues).toHaveProperty(['attendees.0.documentNumber']);
+  });
+
+  test('mutualista vacia se rechaza', async ({ request }) => {
+    const res = await post(request, {
+      ...validBody(),
+      attendees: [{ ...validAttendee(), medicalInsurance: '' }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).issues).toHaveProperty(['attendees.0.medicalInsurance']);
+  });
+
+  test('contacto de emergencia incompleto (sin telefono) se rechaza', async ({ request }) => {
+    const res = await post(request, {
+      ...validBody(),
+      attendees: [
+        { ...validAttendee(), emergencyContact: { name: 'Luis', phone: '', relation: 'Hermano' } },
+      ],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).issues).toHaveProperty(['attendees.0.emergencyContact.phone']);
+  });
+
+  test('campos con solo espacios se rechazan (trim)', async ({ request }) => {
+    // nonEmpty hace trim antes de min(1): "   " es vacio, no un valor valido.
+    const res = await post(request, {
+      ...validBody(),
+      attendees: [{ ...validAttendee(), fullName: '   ' }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).issues).toHaveProperty(['attendees.0.fullName']);
+  });
 });
 
 test.describe('registro — casos maliciosos', () => {
