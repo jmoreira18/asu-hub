@@ -31,7 +31,7 @@ function Retorno() {
         if (data?.status === 'paid') setView('paid');
         else if (data?.status === 'confirmed')
           setView(
-            redirectStatus === 'rejected' || redirectStatus === 'failure' ? 'failed' : 'pending',
+            redirectStatus === 'rejected' || redirectStatus === 'cancelled' ? 'failed' : 'pending',
           );
         else setView('unknown');
       })
