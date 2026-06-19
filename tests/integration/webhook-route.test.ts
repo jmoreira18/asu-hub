@@ -99,4 +99,16 @@ describe('POST /api/payments/webhook', () => {
     await post(JSON.stringify({ data: { id: 'del-body' } }));
     expect(verifyWebhook).toHaveBeenCalledWith(expect.objectContaining({ dataId: 'del-body' }));
   });
+
+  it('dataId vacío si el body no trae data ni hay query param', async () => {
+    parseWebhook.mockReturnValue(null);
+    await post(JSON.stringify({ type: 'ping' }));
+    expect(verifyWebhook).toHaveBeenCalledWith(expect.objectContaining({ dataId: '' }));
+  });
+
+  it('dataId vacío si el body trae data pero sin id', async () => {
+    parseWebhook.mockReturnValue(null);
+    await post(JSON.stringify({ data: {} }));
+    expect(verifyWebhook).toHaveBeenCalledWith(expect.objectContaining({ dataId: '' }));
+  });
 });

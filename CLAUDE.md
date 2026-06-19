@@ -52,7 +52,7 @@ tests/e2e           # Playwright (funcionales)
 ```bash
 npm run dev         # desarrollo (sin credenciales usa adapters en memoria)
 npm test            # unit + integration
-npm run test:cov    # + cobertura (gate 100% en src/core)
+npm run test:cov    # + cobertura (gate 100%: core + adapters + rutas API)
 npm run test:e2e    # Playwright
 npm run typecheck   # tsc --noEmit
 npm run lint
@@ -61,7 +61,9 @@ npm run build
 
 ## Testing (resumen)
 
-- **Unit + integration:** en cada PR. Gate **100% sobre `src/core`**. Sin Allure.
+- **Unit + integration:** en cada PR. Gate **100% sobre core + adapters + rutas
+  API** (`src/core`, `src/adapters`, `src/app/api/**/*.ts`; excluye la UI `.tsx`
+  —la cubre el E2E— y `dev-checkout`, tooling solo de dev). Sin Allure.
 - **E2E / funcional (Playwright):** solo en tag/release → reporte **Allure** a
   GitHub Pages. Allure nunca para unit/integration.
 
